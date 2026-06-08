@@ -1,0 +1,511 @@
+<!-- templates/admin_usuarios.html -->
+{% extends "base.html" %}
+
+{% block title %}Administración de Usuarios{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <h1>👥 Administración de Usuarios</h1>
+            <button onclick="mostrarModalAgregar()" class="btn btn-primary" style="background: #10b981;">
+                ➕ Agregar Usuario
+            </button>
+        </div>
+        <p class="admin-subtitle">Gestiona los usuarios que pueden acceder al sistema</p>
+    </div>
+
+    <div class="stats-cards">
+        <div class="stat-card-admin">
+            <div class="stat-icon">👑</div>
+            <div class="stat-info">
+                <span class="stat-number" id="adminCount">0</span>
+                <span class="stat-label">Administradores</span>
+            </div>
+        </div>
+        <div class="stat-card-admin">
+            <div class="stat-icon">👨‍🏫</div>
+            <div class="stat-info">
+                <span class="stat-number" id="entrenadorCount">0</span>
+                <span class="stat-label">Entrenadores</span>
+            </div>
+        </div>
+        <div class="stat-card-admin">
+            <div class="stat-icon">👤</div>
+            <div class="stat-info">
+                <span class="stat-number" id="invitadoCount">0</span>
+                <span class="stat-label">Invitados</span>
+            </div>
+        </div>
+        <div class="stat-card-admin">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+                <span class="stat-number" id="totalUsuarios">0</span>
+                <span class="stat-label">Total Usuarios</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuario</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Fecha Registro</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr data-rol="{{ usuario.rol }}">
+                    <td>{{ usuario.id }}</td>
+                    <td><strong>{{ usuario.username }}</strong></td>
+                    <td>{{ usuario.nombre or '-' }}</td>
+                    <td>{{ usuario.email or '-' }}</td>
+                    <td>
+                        {% if usuario.rol == 'admin' %}
+                            <span class="rol-badge admin">👑 Administrador</span>
+                        {% elif usuario.rol == 'entrenador' %}
+                            <span class="rol-badge entrenador">👨‍🏫 Entrenador</span>
+                        {% else %}
+                            <span class="rol-badge invitado">👤 Invitado</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ usuario.creado_en[:10] if usuario.creado_en else '-' }}</td>
+                    <td>
+                        {% if session.usuario_id != usuario.id %}
+                            <button onclick="eliminarUsuario({{ usuario.id }}, '{{ usuario.username }}')" 
+                                    class="btn-delete" title="Eliminar usuario">
+                                🗑️
+                            </button>
+                        {% else %}
+                            <span class="text-muted">(Tú)</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para agregar usuario -->
+<div id="modalAgregar" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>➕ Agregar Nuevo Usuario</h2>
+            <span class="modal-close" onclick="cerrarModalAgregar()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="agregarUsuarioForm" method="POST" action="/admin/usuario/agregar">
+                <div class="form-group">
+                    <label>👤 Nombre de usuario *</label>
+                    <input type="text" name="username" placeholder="Ej: juanperez" required>
+                    <small>Nombre único para iniciar sesión</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>🔒 Contraseña *</label>
+                    <input type="password" name="password" placeholder="Contraseña" required>
+                    <small>Mínimo 6 caracteres</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>📛 Nombre completo</label>
+                    <input type="text" name="nombre" placeholder="Ej: Juan Pérez">
+                </div>
+                
+                <div class="form-group">
+                    <label>📧 Correo electrónico</label>
+                    <input type="email" name="email" placeholder="ejemplo@correo.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>🎭 Rol *</label>
+                    <select name="rol" required>
+                        <option value="entrenador">👨‍🏫 Entrenador (Solo lectura)</option>
+                        <option value="invitado">👤 Invitado (Solo lectura)</option>
+                        <option value="admin">👑 Administrador (Acceso total)</option>
+                    </select>
+                </div>
+                
+                <div class="info-box">
+                    <strong>ℹ️ Información de roles:</strong>
+                    <ul>
+                        <li><strong>Administrador:</strong> Acceso total - Puede crear, editar y eliminar todo</li>
+                        <li><strong>Entrenador:</strong> Solo lectura - Puede ver información pero no modificarla</li>
+                        <li><strong>Invitado:</strong> Solo lectura - Acceso limitado para visualización</li>
+                    </ul>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Guardar Usuario</button>
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalAgregar()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.admin-header {
+    margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+    font-size: 1.875rem;
+    color: var(--gray-800);
+}
+
+.admin-subtitle {
+    color: var(--gray-500);
+    margin-top: 0.5rem;
+}
+
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card-admin {
+    background: var(--bg-primary);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.stat-icon {
+    font-size: 2rem;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.table-container {
+    background: var(--bg-primary);
+    border-radius: 0.75rem;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.admin-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.admin-table tr:hover {
+    background: var(--gray-50);
+}
+
+.rol-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.rol-badge.admin {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.rol-badge.entrenador {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.rol-badge.invitado {
+    background: #f3e8ff;
+    color: #6b21a5;
+}
+
+.btn-delete {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s;
+}
+
+.btn-delete:hover {
+    background: #fee2e2;
+    transform: scale(1.1);
+}
+
+.text-muted {
+    color: var(--gray-400);
+    font-size: 0.875rem;
+}
+
+.info-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.info-box ul {
+    margin-top: 0.5rem;
+    margin-left: 1.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.info-box li {
+    margin: 0.25rem 0;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background-color: var(--bg-primary);
+    margin: 5% auto;
+    border-radius: 1rem;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: var(--shadow-xl);
+    animation: slideIn 0.3s ease;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0;
+}
+
+.modal-close {
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--gray-400);
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: var(--danger);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+    color: var(--gray-500);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    justify-content: flex-end;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: var(--gray-500);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: var(--gray-600);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+</style>
+
+<script>
+function mostrarModalAgregar() {
+    document.getElementById('modalAgregar').style.display = 'block';
+}
+
+function cerrarModalAgregar() {
+    document.getElementById('modalAgregar').style.display = 'none';
+}
+
+function eliminarUsuario(usuarioId, usuarioNombre) {
+    if (confirm(`¿Estás seguro de eliminar al usuario "${usuarioNombre}"?\n\nEsta acción no se puede deshacer.`)) {
+        window.location.href = `/admin/usuario/eliminar/${usuarioId}`;
+    }
+}
+
+// Cerrar modal al hacer clic fuera
+window.onclick = function(event) {
+    const modal = document.getElementById('modalAgregar');
+    if (event.target === modal) {
+        cerrarModalAgregar();
+    }
+}
+
+// Contar usuarios por rol
+function actualizarEstadisticas() {
+    const rows = document.querySelectorAll('.admin-table tbody tr');
+    let adminCount = 0;
+    let entrenadorCount = 0;
+    let invitadoCount = 0;
+    
+    rows.forEach(row => {
+        const rol = row.getAttribute('data-rol');
+        if (rol === 'admin') adminCount++;
+        else if (rol === 'entrenador') entrenadorCount++;
+        else if (rol === 'invitado') invitadoCount++;
+    });
+    
+    document.getElementById('adminCount').textContent = adminCount;
+    document.getElementById('entrenadorCount').textContent = entrenadorCount;
+    document.getElementById('invitadoCount').textContent = invitadoCount;
+    document.getElementById('totalUsuarios').textContent = rows.length;
+}
+
+// Ejecutar al cargar
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarEstadisticas();
+});
+</script>
+{% endblock %}

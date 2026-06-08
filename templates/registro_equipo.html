@@ -1,0 +1,160 @@
+<!-- templates/registro_equipo.html -->
+{% extends "base.html" %}
+
+{% block title %}Registro de Equipo - {{ torneo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="registro-container">
+    <div class="hero-section">
+        <h1>📝 Registro de Equipo</h1>
+        <p>Completa el formulario para inscribir tu equipo en {{ torneo.nombre }}</p>
+    </div>
+
+    <div class="form-card">
+        <form id="registroEquipoForm">
+            <div class="form-group">
+                <label for="nombre">Nombre del Equipo *</label>
+                <input type="text" id="nombre" name="nombre" required>
+                <small class="text-muted">Ej: CCDR Puriscal, AD San José, etc.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="entrenador">Nombre del Entrenador/a</label>
+                <input type="text" id="entrenador" name="entrenador">
+                <small class="text-muted">Nombre del entrenador principal del equipo</small>
+            </div>
+
+            <div class="form-group">
+                <label for="anio">Año de Fundación</label>
+                <input type="number" id="anio" name="anio" min="1900" max="2026">
+                <small class="text-muted">Año en que se fundó el equipo</small>
+            </div>
+
+            <div class="form-group">
+                <label for="estadio">Estadio / Cancha Principal</label>
+                <input type="text" id="estadio" name="estadio">
+                <small class="text-muted">Lugar donde juegan habitualmente</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-large">Registrar Equipo</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.registro-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.form-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.btn-large {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.btn-large:hover {
+    transform: translateY(-2px);
+}
+
+.text-muted {
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+</style>
+
+<script>
+document.getElementById('registroEquipoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '⏳ Registrando...';
+    submitBtn.disabled = true;
+    
+    const formData = {
+        nombre: document.getElementById('nombre').value.trim(),
+        entrenador: document.getElementById('entrenador').value.trim(),
+        anio_fundacion: document.getElementById('anio').value || null,
+        estadio: document.getElementById('estadio').value.trim()
+    };
+    
+    if (!formData.nombre) {
+        alert('❌ Por favor ingresa el nombre del equipo');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/torneo/{{ torneo_id }}/registro_equipo`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            alert('✅ ¡Equipo registrado exitosamente! Espera la confirmación del organizador.');
+            document.getElementById('registroEquipoForm').reset();
+        } else {
+            alert('❌ Error: ' + (data.error || 'No se pudo registrar el equipo'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error de conexión. Verifica que el servidor esté funcionando.');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+});
+</script>
+{% endblock %}

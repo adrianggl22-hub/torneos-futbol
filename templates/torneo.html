@@ -1,0 +1,1605 @@
+<!-- templates/torneo.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ torneo.nombre }} - Administración{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--gray-200);
+        flex-wrap: wrap;
+    }
+    .tab-btn {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--gray-500);
+        transition: all 0.3s;
+    }
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom: 2px solid var(--primary);
+        margin-bottom: -2px;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .equipos-grid, .jugadores-grid, .tecnico-grid {
+        display: grid;
+        gap: 15px;
+        margin-top: 15px;
+    }
+    .equipo-card, .jugador-card, .tecnico-card, .partido-card {
+        background: var(--gray-50);
+        border-radius: 10px;
+        padding: 15px;
+        border-left: 4px solid var(--primary);
+        margin-bottom: 10px;
+    }
+    .partido-jugado {
+        background: #f0fdf4;
+        border-left-color: var(--secondary);
+    }
+    .partido-pendiente {
+        background: white;
+        border-left-color: var(--warning);
+    }
+    .table-container {
+        overflow-x: auto;
+        margin: 20px 0;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        background: white;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    th, td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    th {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+    }
+    tr:hover {
+        background-color: var(--gray-50);
+    }
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+    }
+    .modal-content {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--gray-200);
+        border-radius: 6px;
+    }
+    .btn-icon {
+        padding: 5px 10px;
+        margin: 0 2px;
+        font-size: 12px;
+    }
+    .btn-small {
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        margin: 2px;
+        transition: all 0.2s;
+    }
+    .btn-warning {
+        background: #f59e0b;
+        color: white;
+    }
+    .btn-warning:hover {
+        background: #d97706;
+    }
+    .btn-info {
+        background: var(--primary);
+        color: white;
+    }
+    .btn-info:hover {
+        background: var(--primary-dark);
+    }
+    .btn-success {
+        background: var(--secondary);
+        color: white;
+    }
+    .btn-success:hover {
+        background: #059669;
+    }
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+    .btn-print {
+        background: #0f3460;
+        color: white;
+    }
+    .btn-print:hover {
+        background: #1a4a6f;
+    }
+    .btn-backup {
+        background: #6c757d;
+        color: white;
+    }
+    .btn-backup:hover {
+        background: #5a6268;
+    }
+    .flex-between {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: var(--gray-500);
+    }
+    .error-message {
+        color: var(--danger);
+        background: #fee2e2;
+        padding: 10px;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    .success-message {
+        color: var(--secondary);
+        background: #d1fae5;
+        padding: 10px;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    .goleadores-input {
+        font-size: 14px;
+        margin-top: 10px;
+    }
+    .goleadores-input input {
+        font-size: 14px;
+    }
+    .medalla-oro { color: #FFD700; }
+    .medalla-plata { color: #C0C0C0; }
+    .medalla-bronce { color: #CD7F32; }
+    .info-mensaje {
+        text-align: center;
+        padding: 40px;
+        color: var(--gray-500);
+        background: var(--gray-50);
+        border-radius: 12px;
+    }
+    .datalist-suggestions {
+        font-size: 12px;
+        color: gray;
+        margin-top: 5px;
+    }
+    .equipo-sugerencias {
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    /* ==================== ESTILOS PARA PLAYOFFS ==================== */
+    .bracket {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border-radius: 20px;
+        overflow-x: auto;
+        margin-top: 20px;
+    }
+    
+    .round {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        margin: 0 20px;
+        min-width: 280px;
+    }
+    
+    .round-title {
+        text-align: center;
+        color: #FFD700;
+        font-weight: bold;
+        margin-bottom: 20px;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .match {
+        background: rgba(255,255,255,0.1);
+        border-radius: 12px;
+        margin: 15px 0;
+        min-width: 260px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+        overflow: hidden;
+        transition: transform 0.2s;
+    }
+    
+    .match:hover {
+        transform: scale(1.02);
+    }
+    
+    .match-header {
+        background: rgba(0,0,0,0.5);
+        padding: 8px;
+        text-align: center;
+        font-size: 11px;
+        color: #aaa;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .team {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+        color: white;
+        font-weight: 500;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        transition: background 0.2s;
+    }
+    
+    .team:last-child {
+        border-bottom: none;
+    }
+    
+    .team-name {
+        flex: 1;
+        font-size: 14px;
+    }
+    
+    .team-score {
+        font-weight: bold;
+        font-size: 18px;
+        color: #FFD700;
+        background: rgba(0,0,0,0.3);
+        padding: 4px 10px;
+        border-radius: 20px;
+        margin-left: 10px;
+    }
+    
+    .winner {
+        background: linear-gradient(90deg, rgba(46,204,113,0.2), rgba(46,204,113,0.05));
+        border-left: 3px solid #2ecc71;
+    }
+    
+    .match-vs {
+        text-align: center;
+        color: #FFD700;
+        font-size: 12px;
+        padding: 5px;
+        background: rgba(0,0,0,0.3);
+    }
+    
+    .campeon-section {
+        text-align: center;
+        margin-top: 30px;
+        padding: 20px;
+        background: linear-gradient(135deg, #FFD700, #FFA500);
+        border-radius: 15px;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+    
+    .campeon-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #1a1a2e;
+    }
+    
+    .campeon-name {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1a1a2e;
+        margin-top: 10px;
+    }
+    
+    .trofeo {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+    
+    .btn-playoff {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        margin: 10px 0;
+        font-size: 16px;
+        transition: all 0.3s;
+    }
+    
+    .btn-playoff:hover {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        transform: translateY(-2px);
+    }
+    
+    .clasificados-table {
+        margin: 20px 0;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .clasificados-table th {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+    }
+    
+    .pos-1 { background: linear-gradient(90deg, #FFD700, #fff8dc); font-weight: bold; }
+    .pos-2 { background: linear-gradient(90deg, #C0C0C0, #f0f0f0); font-weight: bold; }
+    .pos-3 { background: linear-gradient(90deg, #CD7F32, #f5e6d3); font-weight: bold; }
+    .pos-4 { background: linear-gradient(90deg, #87CEEB, #e0f0ff); font-weight: bold; }
+    
+    .btn-semifinal {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 11px;
+        margin: 2px;
+        transition: all 0.2s;
+    }
+    
+    .btn-semifinal:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="flex-between">
+        <div>
+            <h1>🏆 {{ torneo.nombre }}</h1>
+            <p>Categoría: {{ torneo.categoria }} | Equipos: {{ torneo.equipos|length }}</p>
+        </div>
+        <div>
+            <a href="/" class="btn" style="background: rgba(255,255,255,0.2); color: white;">← Volver a Inicio</a>
+        </div>
+    </div>
+</div>
+
+<div style="padding: 2rem;">
+    <!-- Pestañas -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('equipos')">📋 Equipos</button>
+        <button class="tab-btn" onclick="showTab('jugadores')">👥 Jugadores</button>
+        <button class="tab-btn" onclick="showTab('cuerpo_tecnico')">👨‍🏫 Cuerpo Técnico</button>
+        <button class="tab-btn" onclick="showTab('fixture')">⚽ Fixture</button>
+        <button class="tab-btn" onclick="showTab('resultados')">📊 Resultados</button>
+        <button class="tab-btn" onclick="showTab('tabla')">📈 Tabla</button>
+        <button class="tab-btn" onclick="showTab('goleadores')">⚽ Goleadores</button>
+        <button class="tab-btn" onclick="showTab('calendario')">📅 Calendario</button>
+        <button class="tab-btn" onclick="showTab('playoffs')">🏆 Playoffs</button>
+    </div>
+
+    <!-- Tab: Equipos -->
+    <div id="tab-equipos" class="tab-content active">
+        <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="mostrarModalAgregarEquipo()">➕ Agregar Equipo</button>
+            <button class="btn btn-backup" onclick="crearBackupManual()">💾 Backup Manual</button>
+        </div>
+        <div id="equiposList" class="equipos-grid">
+            {% if torneo.equipos %}
+                {% for id, equipo in torneo.equipos.items() %}
+                <div class="equipo-card">
+                    <div class="flex-between">
+                        <div>
+                            <h3>{{ equipo.nombre }}</h3>
+                            <p style="font-size: 12px; color: var(--gray-500);">🎽 {{ equipo.jugadores|length }} jugadores | 👨‍🏫 {{ equipo.cuerpo_tecnico|length }} técnicos</p>
+                        </div>
+                        <div>
+                            <button class="btn-small btn-info" onclick="verJugadores({{ id }})">👥 Jugadores</button>
+                            <button class="btn-small btn-info" onclick="verCuerpoTecnicoEquipo({{ id }})">👨‍🏫 Técnicos</button>
+                            <button class="btn-small btn-print" onclick="imprimirPlantillaEquipo({{ id }})">🖨️ Imprimir</button>
+                            <button class="btn-small btn-danger" onclick="eliminarEquipo({{ id }})">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="info-mensaje">No hay equipos registrados aún</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tab: Jugadores -->
+    <div id="tab-jugadores" class="tab-content">
+        <div style="margin-bottom: 20px;">
+            <select id="equipoJugadoresSelect" style="padding: 8px; border-radius: 5px; margin-right: 10px;">
+                <option value="">Seleccionar equipo</option>
+                {% for id, equipo in torneo.equipos.items() %}
+                <option value="{{ id }}">{{ equipo.nombre }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-primary" onclick="mostrarModalAgregarJugador()">➕ Agregar Jugador</button>
+            <button class="btn btn-print" onclick="imprimirPlantilla()" style="background: #0f3460; color: white; padding: 8px 16px; border-radius: 5px; border: none; cursor: pointer;">🖨️ Imprimir Plantilla</button>
+        </div>
+        <div id="jugadoresList"></div>
+    </div>
+
+    <!-- Tab: Cuerpo Técnico -->
+    <div id="tab-cuerpo_tecnico" class="tab-content">
+        <div style="margin-bottom: 20px;">
+            <select id="equipoTecnicoSelect" style="padding: 8px; border-radius: 5px; margin-right: 10px;">
+                <option value="">Seleccionar equipo</option>
+                {% for id, equipo in torneo.equipos.items() %}
+                <option value="{{ id }}">{{ equipo.nombre }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-primary" onclick="mostrarModalAgregarTecnico()">➕ Agregar Miembro</button>
+            <button class="btn btn-print" onclick="imprimirPlantilla()" style="background: #0f3460; color: white; padding: 8px 16px; border-radius: 5px; border: none; cursor: pointer;">🖨️ Imprimir Plantilla</button>
+        </div>
+        <div id="tecnicoList"></div>
+    </div>
+
+    <!-- Tab: Fixture -->
+    <div id="tab-fixture" class="tab-content">
+        <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="generarFixture()">⚽ Generar Fixture</button>
+            <button class="btn btn-danger" onclick="borrarCalendario()" style="background: #ef4444; color: white;">🗑️ Borrar Calendario</button>
+            <button class="btn btn-secondary" onclick="imprimirCalendario()">🖨️ Imprimir Calendario</button>
+        </div>
+        <div id="fixtureList"></div>
+    </div>
+
+    <!-- Tab: Resultados -->
+    <div id="tab-resultados" class="tab-content">
+        <div id="resultadosList"></div>
+    </div>
+
+    <!-- Tab: Tabla de Posiciones -->
+    <div id="tab-tabla" class="tab-content">
+        <div id="tablaPosiciones"></div>
+    </div>
+
+    <!-- Tab: Goleadores -->
+    <div id="tab-goleadores" class="tab-content">
+        <div id="rankingGoleadores"></div>
+    </div>
+
+    <!-- Tab: Calendario -->
+    <div id="tab-calendario" class="tab-content">
+        <div style="margin-bottom: 15px;">
+            <button class="btn btn-secondary" onclick="imprimirCalendario()">🖨️ Imprimir Calendario Completo</button>
+        </div>
+        <div id="calendarioList"></div>
+    </div>
+
+    <!-- Tab: Playoffs -->
+    <div id="tab-playoffs" class="tab-content">
+        <div style="margin-bottom: 20px;">
+            <button class="btn-playoff" onclick="generarPlayoffs()">🎲 Generar Playoffs</button>
+        </div>
+        <div id="clasificadosPlayoffs" class="clasificados-table" style="display: none;"></div>
+        <div id="llavesContainer" class="bracket" style="display: none;"></div>
+    </div>
+</div>
+
+<!-- Modales -->
+<div id="modalEquipo" class="modal">
+    <div class="modal-content">
+        <h3>Agregar Equipo</h3>
+        <form id="formAgregarEquipo">
+            <div class="form-group"><label>Nombre del equipo</label><input type="text" id="nombreEquipo" required></div>
+            <div class="form-group"><label>Entrenador</label><input type="text" id="entrenadorEquipo"></div>
+            <div class="form-group"><label>Año de fundación</label><input type="text" id="anioFundacion"></div>
+            <div class="form-group"><label>Estadio</label><input type="text" id="estadioEquipo"></div>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalEquipo')">Cancelar</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalJugador" class="modal">
+    <div class="modal-content">
+        <h3>➕ Agregar Jugador</h3>
+        <form id="formAgregarJugador">
+            <div class="form-group">
+                <label>Equipo</label>
+                <select id="jugadorEquipoId" required>
+                    {% for id, equipo in torneo.equipos.items() %}
+                    <option value="{{ id }}">{{ equipo.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>Nombre completo</label><input type="text" id="jugadorNombre" required></div>
+            <div class="form-group"><label>Nombre abreviado</label><input type="text" id="jugadorNombreAbreviado" placeholder="Ej: V. Alpizar"></div>
+            <div class="form-group"><label>Número</label><input type="number" id="jugadorNumero" required></div>
+            <div class="form-group"><label>Posición</label><input type="text" id="jugadorPosicion" placeholder="Ej: Arquero, Defensa, Mediocampista, Delantera" required></div>
+            <div class="form-group"><label>Documento</label><input type="text" id="jugadorDocumento"></div>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalJugador')">Cancelar</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalTecnico" class="modal">
+    <div class="modal-content">
+        <h3>Agregar Miembro del Cuerpo Técnico</h3>
+        <form id="formAgregarTecnico">
+            <div class="form-group"><label>Equipo</label><select id="tecnicoEquipoId" required>{% for id, equipo in torneo.equipos.items() %}<option value="{{ id }}">{{ equipo.nombre }}</option>{% endfor %}</select></div>
+            <div class="form-group"><label>Nombre</label><input type="text" id="tecnicoNombre" required></div>
+            <div class="form-group"><label>Rol</label><select id="tecnicoRol"><option>Entrenador/a</option><option>Asistente Técnico</option><option>Preparador Físico</option><option>Médico/a</option><option>Kinesiólogo/a</option></select></div>
+            <div class="form-group"><label>Documento</label><input type="text" id="tecnicoDocumento"></div>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalTecnico')">Cancelar</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalEditarPartido" class="modal">
+    <div class="modal-content">
+        <h3>Editar Partido</h3>
+        <form id="formEditarPartido">
+            <input type="hidden" id="editarPartidoId">
+            <div class="form-group"><label>Fecha (YYYY-MM-DD)</label><input type="date" id="editarFecha"></div>
+            <div class="form-group"><label>Hora (HH:MM)</label><input type="time" id="editarHora"></div>
+            <div class="form-group"><label>Cancha</label><input type="text" id="editarCancha" placeholder="Nombre de la cancha"></div>
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalEditarPartido')">Cancelar</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalResultado" class="modal">
+    <div class="modal-content">
+        <h3>📝 Registrar Resultado y Goleadoras</h3>
+        <form id="formRegistrarResultado">
+            <input type="hidden" id="resultadoPartidoId">
+            <div id="nombreEquiposModal" style="margin-bottom: 15px; text-align: center; font-weight: bold; font-size: 16px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div style="background: #f0fdf4; padding: 15px; border-radius: 10px;">
+                    <h4 style="color: var(--primary);" id="nombreLocalModal">🏠 Local</h4>
+                    <div class="form-group"><label>Goles Local</label><input type="number" id="golesLocal" min="0" value="0" required style="font-size: 24px; text-align: center;"></div>
+                    <div class="form-group goleadores-input"><label>🏆 Goleadoras Local</label><input type="text" id="goleadoresLocal" list="jugadoresLocalList" placeholder="Ej: María Pérez, Ana Rodríguez"></div>
+                </div>
+                <div style="background: #fef3c7; padding: 15px; border-radius: 10px;">
+                    <h4 style="color: var(--primary);" id="nombreVisitanteModal">✈️ Visitante</h4>
+                    <div class="form-group"><label>Goles Visitante</label><input type="number" id="golesVisitante" min="0" value="0" required style="font-size: 24px; text-align: center;"></div>
+                    <div class="form-group goleadores-input"><label>🏆 Goleadoras Visitante</label><input type="text" id="goleadoresVisitante" list="jugadoresVisitanteList" placeholder="Ej: Laura Torres, Sofía Castro"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">✅ Guardar Resultado</button>
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalResultado')">❌ Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modalEditarJugador" class="modal">
+    <div class="modal-content">
+        <h3 style="color: var(--primary);">✏️ Editar Jugador</h3>
+        <form id="formEditarJugador">
+            <input type="hidden" id="editarJugadorId">
+            <div class="form-group"><label>Nombre completo</label><input type="text" id="editarJugadorNombre" required></div>
+            <div class="form-group"><label>Nombre abreviado</label><input type="text" id="editarJugadorNombreAbreviado" placeholder="Ej: V. Alpizar"></div>
+            <div class="form-group"><label>Número de camiseta</label><input type="number" id="editarJugadorNumero" required></div>
+            <div class="form-group"><label>Posición</label><input type="text" id="editarJugadorPosicion" placeholder="Ej: Arquero, Defensa, Mediocampista, Delantera" required></div>
+            <div class="form-group"><label>Documento</label><input type="text" id="editarJugadorDocumento"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <div class="form-group"><label>⚽ Goles</label><input type="number" id="editarJugadorGoles" min="0" value="0"></div>
+                <div class="form-group"><label>🟨 Tarjetas Amarillas</label><input type="number" id="editarJugadorAmarillas" min="0" value="0"></div>
+                <div class="form-group"><label>🟥 Tarjetas Rojas</label><input type="number" id="editarJugadorRojas" min="0" value="0"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">💾 Guardar Cambios</button>
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalEditarJugador')">❌ Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modalAgregarGol" class="modal">
+    <div class="modal-content">
+        <h3>⚽ Agregar Gol</h3>
+        <form id="formAgregarGol">
+            <input type="hidden" id="golJugadorId">
+            <div class="form-group"><label>Jugadora</label><input type="text" id="golJugadorNombre" readonly style="background: #f3f4f6; font-weight: bold;"></div>
+            <div class="form-group"><label>¿Cuántos goles anotó?</label><input type="number" id="golCantidad" min="1" max="10" value="1" required style="font-size: 24px; text-align: center;"></div>
+            <div class="form-group"><label>Partido (opcional)</label><select id="golPartidoId"><option value="">Seleccionar partido (opcional)</option></select></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">⚽ Agregar Gol(es)</button>
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalAgregarGol')">❌ Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para resultados de playoffs -->
+<div id="modalResultadoPlayoff" class="modal">
+    <div class="modal-content">
+        <h3>📝 Registrar Resultado Playoff</h3>
+        <form id="formResultadoPlayoff">
+            <input type="hidden" id="playoffLlave">
+            <input type="hidden" id="playoffTipo">
+            <div id="playoffEquiposInfo" style="margin-bottom: 15px; text-align: center; font-weight: bold;"></div>
+            <div class="form-group">
+                <label>Goles Local</label>
+                <input type="number" id="playoffGolesLocal" min="0" value="0" required style="font-size: 24px; text-align: center;">
+            </div>
+            <div class="form-group">
+                <label>Goles Visitante</label>
+                <input type="number" id="playoffGolesVisitante" min="0" value="0" required style="font-size: 24px; text-align: center;">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">✅ Guardar Resultado</button>
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalResultadoPlayoff')">❌ Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const torneoId = '{{ torneo.id }}';
+    let equipoSeleccionadoJugadores = null;
+    let equipoSeleccionadoTecnico = null;
+    let jugadoresLocal = [];
+    let jugadoresVisitante = [];
+
+    function showTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        if (event && event.target) event.target.classList.add('active');
+        if (tabName === 'jugadores') cargarJugadores();
+        if (tabName === 'cuerpo_tecnico') cargarCuerpoTecnico();
+        if (tabName === 'fixture') cargarFixture();
+        if (tabName === 'resultados') cargarResultados();
+        if (tabName === 'tabla') cargarTablaPosiciones();
+        if (tabName === 'goleadores') cargarGoleadores();
+        if (tabName === 'calendario') cargarCalendario();
+        if (tabName === 'playoffs') cargarPlayoffs();
+    }
+
+    function cerrarModal(modalId) { 
+        document.getElementById(modalId).style.display = 'none'; 
+    }
+    
+    function mostrarModalAgregarEquipo() { document.getElementById('modalEquipo').style.display = 'flex'; }
+    function mostrarModalAgregarJugador() { document.getElementById('modalJugador').style.display = 'flex'; }
+    function mostrarModalAgregarTecnico() { document.getElementById('modalTecnico').style.display = 'flex'; }
+    
+    function mostrarModalEditarPartido(partidoId, fecha, hora, cancha) {
+        document.getElementById('editarPartidoId').value = partidoId;
+        document.getElementById('editarFecha').value = fecha || '';
+        document.getElementById('editarHora').value = hora || '';
+        document.getElementById('editarCancha').value = cancha || '';
+        document.getElementById('modalEditarPartido').style.display = 'flex';
+    }
+    
+    function mostrarModalResultado(partidoId, nombreLocal, nombreVisitante, equipoLocalId, equipoVisitanteId) {
+        document.getElementById('resultadoPartidoId').value = partidoId;
+        document.getElementById('nombreLocalModal').innerHTML = '🏠 ' + nombreLocal;
+        document.getElementById('nombreVisitanteModal').innerHTML = '✈️ ' + nombreVisitante;
+        document.getElementById('nombreEquiposModal').innerHTML = '<span style="color: var(--primary);">🏠 ' + escapeHtml(nombreLocal) + '</span> vs <span style="color: var(--warning);">✈️ ' + escapeHtml(nombreVisitante) + '</span>';
+        document.getElementById('golesLocal').value = 0;
+        document.getElementById('golesVisitante').value = 0;
+        document.getElementById('goleadoresLocal').value = '';
+        document.getElementById('goleadoresVisitante').value = '';
+        
+        cargarSugerenciasJugadores(equipoLocalId, equipoVisitanteId);
+        document.getElementById('modalResultado').style.display = 'flex';
+    }
+    
+    async function cargarSugerenciasJugadores(equipoLocalId, equipoVisitanteId) {
+        const responseLocal = await fetch(`/api/torneo/${torneoId}/equipo/${equipoLocalId}/jugadores`);
+        jugadoresLocal = await responseLocal.json();
+        const responseVisitante = await fetch(`/api/torneo/${torneoId}/equipo/${equipoVisitanteId}/jugadores`);
+        jugadoresVisitante = await responseVisitante.json();
+        const datalistLocal = document.getElementById('jugadoresLocalList');
+        const datalistVisitante = document.getElementById('jugadoresVisitanteList');
+        datalistLocal.innerHTML = '';
+        datalistVisitante.innerHTML = '';
+        jugadoresLocal.forEach(j => {
+            const option = document.createElement('option');
+            option.value = j.nombre;
+            datalistLocal.appendChild(option);
+            if (j.nombre_abreviado) {
+                const optionAbr = document.createElement('option');
+                optionAbr.value = j.nombre_abreviado;
+                datalistLocal.appendChild(optionAbr);
+            }
+        });
+        jugadoresVisitante.forEach(j => {
+            const option = document.createElement('option');
+            option.value = j.nombre;
+            datalistVisitante.appendChild(option);
+            if (j.nombre_abreviado) {
+                const optionAbr = document.createElement('option');
+                optionAbr.value = j.nombre_abreviado;
+                datalistVisitante.appendChild(optionAbr);
+            }
+        });
+    }
+
+    window.onclick = function(event) { 
+        if (event.target.classList.contains('modal')) event.target.style.display = 'none'; 
+    }
+
+    // ==================== BACKUP MANUAL ====================
+    async function crearBackupManual() {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Creando backup...';
+        btn.disabled = true;
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/backup`, { method: 'POST' });
+            const data = await response.json();
+            if (data.success) {
+                alert('✅ ' + data.mensaje);
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        } catch (error) {
+            alert('❌ Error de conexión');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // ==================== IMPRIMIR PLANTILLA ====================
+    function imprimirPlantilla() {
+        if (!equipoSeleccionadoJugadores) {
+            alert('❌ Primero selecciona un equipo');
+            return;
+        }
+        window.open(`/imprimir_plantilla/${torneoId}/${equipoSeleccionadoJugadores}`, '_blank');
+    }
+
+    function imprimirPlantillaEquipo(equipoId) {
+        window.open(`/imprimir_plantilla/${torneoId}/${equipoId}`, '_blank');
+    }
+
+    // ==================== EQUIPOS ====================
+    document.getElementById('formAgregarEquipo')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const response = await fetch(`/api/torneo/${torneoId}/equipos`, {
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                nombre: document.getElementById('nombreEquipo').value, 
+                entrenador: document.getElementById('entrenadorEquipo').value, 
+                anio_fundacion: document.getElementById('anioFundacion').value, 
+                estadio: document.getElementById('estadioEquipo').value
+            })
+        });
+        const data = await response.json();
+        if (data.success) location.reload();
+        else alert(data.error);
+    });
+
+    function eliminarEquipo(equipoId) { 
+        if (confirm('¿Eliminar este equipo?')) 
+            fetch(`/api/torneo/${torneoId}/equipos`, {
+                method: 'DELETE', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({equipo_id: equipoId})
+            }).then(() => location.reload()); 
+    }
+
+    // ==================== JUGADORES ====================
+    document.getElementById('equipoJugadoresSelect')?.addEventListener('change', function() { 
+        equipoSeleccionadoJugadores = this.value; 
+        cargarJugadores(); 
+    });
+    
+    async function cargarJugadores() {
+        if (!equipoSeleccionadoJugadores) { 
+            document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">Selecciona un equipo</p>'; 
+            return; 
+        }
+        const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`);
+        const jugadores = await response.json();
+        if (jugadores.length === 0) { 
+            document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">No hay jugadores registrados</p>'; 
+            return; 
+        }
+        let html = `<div class="table-container"><table><thead><tr><th style="text-align:center">#</th><th>Nombre</th><th>Posición</th><th style="text-align:center">⚽ Goles</th><th style="text-align:center">🟨 TA</th><th style="text-align:center">🟥 TR</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        jugadores.forEach(j => { 
+            html += `<tr>
+                <td style="text-align:center">${j.numero}</td>
+                <td><strong>${escapeHtml(j.nombre)}</strong>${j.nombre_abreviado ? `<br><small>${escapeHtml(j.nombre_abreviado)}</small>` : ''}</td>
+                <td>${escapeHtml(j.posicion)}</td>
+                <td style="text-align:center;color:var(--primary);font-weight:bold">${j.goles || 0}</td>
+                <td style="text-align:center;color:#f59e0b">${j.tarjetas_amarillas || 0}</td>
+                <td style="text-align:center;color:#ef4444">${j.tarjetas_rojas || 0}</td>
+                <td>${j.documento || '-'}</td>
+                <td style="text-align:center">
+                    <button class="btn-small btn-info" onclick="editarJugador(${j.id}, '${escapeHtml(j.nombre)}', ${j.numero}, '${escapeHtml(j.posicion)}', '${j.documento || ''}', '${escapeHtml(j.nombre_abreviado || '')}', ${j.goles || 0}, ${j.tarjetas_amarillas || 0}, ${j.tarjetas_rojas || 0})">✏️</button>
+                    <button class="btn-small btn-success" onclick="agregarGolJugador(${j.id}, '${escapeHtml(j.nombre)}')">⚽+1</button>
+                    <button class="btn-small btn-warning" onclick="agregarTarjetaAmarilla(${j.id}, '${escapeHtml(j.nombre)}')">🟨+1</button>
+                    <button class="btn-small btn-danger" onclick="agregarTarjetaRoja(${j.id}, '${escapeHtml(j.nombre)}')">🟥+1</button>
+                    <button class="btn-small btn-danger" onclick="eliminarJugador(${j.id})">🗑️</button>
+                </td>
+            </tr>`;
+        });
+        html += `</tbody></table></div>`;
+        document.getElementById('jugadoresList').innerHTML = html;
+    }
+    
+    document.getElementById('formAgregarJugador')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const response = await fetch(`/api/torneo/${torneoId}/equipo/${document.getElementById('jugadorEquipoId').value}/jugadores`, {
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                nombre: document.getElementById('jugadorNombre').value, 
+                nombre_abreviado: document.getElementById('jugadorNombreAbreviado').value,
+                numero: parseInt(document.getElementById('jugadorNumero').value), 
+                posicion: document.getElementById('jugadorPosicion').value, 
+                documento: document.getElementById('jugadorDocumento').value
+            })
+        });
+        const data = await response.json();
+        if (data.success) { 
+            cerrarModal('modalJugador'); 
+            document.getElementById('formAgregarJugador').reset();
+            if (equipoSeleccionadoJugadores) cargarJugadores(); 
+        } else alert(data.error);
+    });
+    
+    function eliminarJugador(jugadorId) { 
+        if (confirm('¿Eliminar jugador?')) 
+            fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`, {
+                method: 'DELETE', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({jugador_id: jugadorId})
+            }).then(() => cargarJugadores()); 
+    }
+
+    // ==================== EDITAR JUGADOR ====================
+    function editarJugador(id, nombre, numero, posicion, documento, nombreAbreviado, goles, tarjetasAmarillas, tarjetasRojas) {
+        document.getElementById('editarJugadorId').value = id;
+        document.getElementById('editarJugadorNombre').value = nombre;
+        document.getElementById('editarJugadorNombreAbreviado').value = nombreAbreviado || '';
+        document.getElementById('editarJugadorNumero').value = numero;
+        document.getElementById('editarJugadorPosicion').value = posicion;
+        document.getElementById('editarJugadorDocumento').value = documento || '';
+        document.getElementById('editarJugadorGoles').value = goles || 0;
+        document.getElementById('editarJugadorAmarillas').value = tarjetasAmarillas || 0;
+        document.getElementById('editarJugadorRojas').value = tarjetasRojas || 0;
+        document.getElementById('modalEditarJugador').style.display = 'flex';
+    }
+
+    document.getElementById('formEditarJugador')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const jugadorId = document.getElementById('editarJugadorId').value;
+        const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores/${jugadorId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                nombre: document.getElementById('editarJugadorNombre').value,
+                nombre_abreviado: document.getElementById('editarJugadorNombreAbreviado').value,
+                numero: parseInt(document.getElementById('editarJugadorNumero').value),
+                posicion: document.getElementById('editarJugadorPosicion').value,
+                documento: document.getElementById('editarJugadorDocumento').value,
+                goles: parseInt(document.getElementById('editarJugadorGoles').value) || 0,
+                tarjetas_amarillas: parseInt(document.getElementById('editarJugadorAmarillas').value) || 0,
+                tarjetas_rojas: parseInt(document.getElementById('editarJugadorRojas').value) || 0
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            cerrarModal('modalEditarJugador');
+            cargarJugadores();
+            cargarGoleadores();
+            alert('✅ Jugador actualizado correctamente');
+        } else {
+            alert('❌ Error: ' + (data.error || 'No se pudo actualizar'));
+        }
+    });
+
+    // ==================== AGREGAR TARJETAS ====================
+    async function agregarTarjetaAmarilla(jugadorId, jugadorNombre) {
+        if (!confirm(`🟨 ¿Agregar tarjeta AMARILLA a ${jugadorNombre}?`)) return;
+        try {
+            const jugadorResponse = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`);
+            const jugadores = await jugadorResponse.json();
+            const jugador = jugadores.find(j => j.id == jugadorId);
+            if (jugador) {
+                const nuevasAmarillas = (jugador.tarjetas_amarillas || 0) + 1;
+                await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores/${jugadorId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        nombre: jugador.nombre, nombre_abreviado: jugador.nombre_abreviado || '',
+                        numero: jugador.numero, posicion: jugador.posicion, documento: jugador.documento || '',
+                        goles: jugador.goles || 0, tarjetas_amarillas: nuevasAmarillas, tarjetas_rojas: jugador.tarjetas_rojas || 0
+                    })
+                });
+                cargarJugadores();
+                alert(`🟨 Tarjeta AMARILLA a ${jugador.nombre} (Total: ${nuevasAmarillas})`);
+            }
+        } catch (error) { alert('❌ Error de conexión'); }
+    }
+
+    async function agregarTarjetaRoja(jugadorId, jugadorNombre) {
+        if (!confirm(`🟥 ¿Agregar tarjeta ROJA a ${jugadorNombre}?`)) return;
+        try {
+            const jugadorResponse = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`);
+            const jugadores = await jugadorResponse.json();
+            const jugador = jugadores.find(j => j.id == jugadorId);
+            if (jugador) {
+                const nuevasRojas = (jugador.tarjetas_rojas || 0) + 1;
+                await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores/${jugadorId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        nombre: jugador.nombre, nombre_abreviado: jugador.nombre_abreviado || '',
+                        numero: jugador.numero, posicion: jugador.posicion, documento: jugador.documento || '',
+                        goles: jugador.goles || 0, tarjetas_amarillas: jugador.tarjetas_amarillas || 0, tarjetas_rojas: nuevasRojas
+                    })
+                });
+                cargarJugadores();
+                alert(`🟥 Tarjeta ROJA a ${jugador.nombre} (Total: ${nuevasRojas})`);
+            }
+        } catch (error) { alert('❌ Error de conexión'); }
+    }
+
+    // ==================== AGREGAR GOL ====================
+    async function agregarGolJugador(jugadorId, jugadorNombre) {
+        const response = await fetch(`/api/torneo/${torneoId}/fixture`);
+        const data = await response.json();
+        const todosPartidos = [...(data.pendientes || []), ...(data.jugados || [])];
+        const select = document.getElementById('golPartidoId');
+        select.innerHTML = '<option value="">Seleccionar partido (opcional)</option>';
+        todosPartidos.forEach(p => {
+            select.innerHTML += `<option value="${p.id}">${p.jugado ? '✅' : '⏳'} ${p.nombre_local} vs ${p.nombre_visitante}</option>`;
+        });
+        document.getElementById('golJugadorId').value = jugadorId;
+        document.getElementById('golJugadorNombre').value = jugadorNombre;
+        document.getElementById('golCantidad').value = 1;
+        document.getElementById('modalAgregarGol').style.display = 'flex';
+    }
+
+    document.getElementById('formAgregarGol')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const jugadorId = document.getElementById('golJugadorId').value;
+        const cantidad = parseInt(document.getElementById('golCantidad').value);
+        if (isNaN(cantidad) || cantidad < 1) { alert('Ingresa una cantidad válida'); return; }
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '⏳ Agregando...';
+        submitBtn.disabled = true;
+        try {
+            const jugadorResponse = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`);
+            const jugadores = await jugadorResponse.json();
+            const jugador = jugadores.find(j => j.id == jugadorId);
+            if (jugador) {
+                const nuevosGoles = (jugador.goles || 0) + cantidad;
+                await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores/${jugadorId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        nombre: jugador.nombre, nombre_abreviado: jugador.nombre_abreviado || '',
+                        numero: jugador.numero, posicion: jugador.posicion, documento: jugador.documento || '',
+                        goles: nuevosGoles, tarjetas_amarillas: jugador.tarjetas_amarillas || 0, tarjetas_rojas: jugador.tarjetas_rojas || 0
+                    })
+                });
+                cerrarModal('modalAgregarGol');
+                cargarJugadores();
+                cargarGoleadores();
+                alert(`✅ Se agregaron ${cantidad} gol(es) a ${jugador.nombre}`);
+            }
+        } catch (error) { alert('❌ Error de conexión'); }
+        finally { submitBtn.textContent = originalText; submitBtn.disabled = false; }
+    });
+
+    // ==================== CUERPO TÉCNICO ====================
+    document.getElementById('equipoTecnicoSelect')?.addEventListener('change', function() { 
+        equipoSeleccionadoTecnico = this.value; 
+        cargarCuerpoTecnico(); 
+    });
+    
+    async function cargarCuerpoTecnico() {
+        if (!equipoSeleccionadoTecnico) { 
+            document.getElementById('tecnicoList').innerHTML = '<p class="info-mensaje">Selecciona un equipo</p>'; 
+            return; 
+        }
+        const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoTecnico}/cuerpo_tecnico`);
+        const tecnicos = await response.json();
+        if (tecnicos.length === 0) { 
+            document.getElementById('tecnicoList').innerHTML = '<p class="info-mensaje">No hay miembros registrados</p>'; 
+            return; 
+        }
+        let html = `<div class="table-container"><tr><thead><tr><th>Rol</th><th>Nombre</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        tecnicos.forEach(t => { 
+            html += `<tr>
+                <td><strong>${escapeHtml(t.rol)}</strong></td>
+                <td>${escapeHtml(t.nombre)}${t.especialidad ? `<br><small>${escapeHtml(t.especialidad)}</small>` : ''}</td>
+                <td>${t.documento || '-'}</td>
+                <td style="text-align:center"><button class="btn-small btn-danger" onclick="eliminarTecnico(${t.id})">🗑️</button></td>
+            </tr>`;
+        });
+        html += `</tbody></table></div>`;
+        document.getElementById('tecnicoList').innerHTML = html;
+    }
+    
+    document.getElementById('formAgregarTecnico')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const response = await fetch(`/api/torneo/${torneoId}/equipo/${document.getElementById('tecnicoEquipoId').value}/cuerpo_tecnico`, {
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                nombre: document.getElementById('tecnicoNombre').value, 
+                rol: document.getElementById('tecnicoRol').value, 
+                documento: document.getElementById('tecnicoDocumento').value
+            })
+        });
+        const data = await response.json();
+        if (data.success) { 
+            cerrarModal('modalTecnico'); 
+            if (equipoSeleccionadoTecnico) cargarCuerpoTecnico(); 
+        } else alert(data.error);
+    });
+    
+    function eliminarTecnico(miembroId) { 
+        if (confirm('¿Eliminar miembro?')) 
+            fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoTecnico}/cuerpo_tecnico/${miembroId}`, {
+                method: 'DELETE'
+            }).then(() => cargarCuerpoTecnico()); 
+    }
+
+    // ==================== FIXTURE ====================
+    async function generarFixture() { 
+        if (!confirm('⚠️ ¿Generar nuevo fixture?')) return;
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Generando...';
+        btn.disabled = true;
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/fixture`, {method: 'POST'}); 
+            const data = await response.json(); 
+            if (data.success) { alert(`✅ ${data.mensaje}`); cargarFixture(); cargarCalendario(); }
+            else alert('❌ Error: ' + data.error);
+        } catch (error) { alert('❌ Error de conexión'); }
+        finally { btn.textContent = originalText; btn.disabled = false; }
+    }
+    
+    async function borrarCalendario() {
+        if (!confirm('⚠️ ¿Borrar TODOS los partidos?')) return;
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Borrando...';
+        btn.disabled = true;
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/borrar_calendario`, {method: 'DELETE'});
+            const data = await response.json();
+            if (data.success) { alert(`✅ ${data.mensaje}`); cargarFixture(); cargarResultados(); cargarCalendario(); }
+            else alert('❌ Error: ' + data.error);
+        } catch (error) { alert('❌ Error de conexión'); }
+        finally { btn.textContent = originalText; btn.disabled = false; }
+    }
+    
+    async function cargarFixture() {
+        const response = await fetch(`/api/torneo/${torneoId}/fixture`);
+        const data = await response.json();
+        const pendientes = data.pendientes || [];
+        if (pendientes.length === 0) { 
+            document.getElementById('fixtureList').innerHTML = '<p class="info-mensaje">No hay partidos programados</p>'; 
+            return; 
+        }
+        let html = `<div class="table-container"><table><thead><tr><th>Local</th><th>Visitante</th><th style="text-align:center">Fecha</th><th style="text-align:center">Hora</th><th>Cancha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        pendientes.forEach(p => {
+            html += `<tr>
+                <td><strong>${escapeHtml(p.nombre_local)}</strong></td>
+                <td><strong>${escapeHtml(p.nombre_visitante)}</strong></td>
+                <td style="text-align:center">${p.fecha || 'Por definir'}</td>
+                <td style="text-align:center">${p.hora || 'Por definir'}</td>
+                <td>${p.cancha || 'Por definir'}</td>
+                <td style="text-align:center">
+                    <button class="btn-small btn-warning" onclick="mostrarModalEditarPartido(${p.id}, '${p.fecha || ''}', '${p.hora || ''}', '${p.cancha || ''}')">✏️</button>
+                    <button class="btn-small btn-success" onclick="mostrarModalResultado(${p.id}, '${escapeHtml(p.nombre_local)}', '${escapeHtml(p.nombre_visitante)}', ${p.id_local}, ${p.id_visitante})">📝</button>
+                </td>
+            </tr>`;
+        });
+        html += `</tbody></table></div>`;
+        document.getElementById('fixtureList').innerHTML = html;
+    }
+
+    // ==================== EDITAR PARTIDO ====================
+    document.getElementById('formEditarPartido')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const partidoId = document.getElementById('editarPartidoId').value;
+        const response = await fetch(`/api/torneo/${torneoId}/partido/${partidoId}`, {
+            method: 'PUT', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                fecha: document.getElementById('editarFecha').value, 
+                hora: document.getElementById('editarHora').value, 
+                cancha: document.getElementById('editarCancha').value
+            })
+        });
+        const data = await response.json();
+        if (data.success) { 
+            cerrarModal('modalEditarPartido'); 
+            cargarFixture(); 
+            cargarCalendario(); 
+            alert('✅ Partido actualizado');
+        } else alert(data.error);
+    });
+
+    // ==================== REGISTRAR RESULTADO ====================
+    document.getElementById('formRegistrarResultado')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const partidoId = document.getElementById('resultadoPartidoId').value;
+        let golesLocal = parseInt(document.getElementById('golesLocal').value);
+        let golesVisitante = parseInt(document.getElementById('golesVisitante').value);
+        const goleadoresLocal = document.getElementById('goleadoresLocal').value.split(',').map(g => g.trim()).filter(g => g);
+        const goleadoresVisitante = document.getElementById('goleadoresVisitante').value.split(',').map(g => g.trim()).filter(g => g);
+        if (isNaN(golesLocal)) golesLocal = 0;
+        if (isNaN(golesVisitante)) golesVisitante = 0;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '⏳ Guardando...';
+        submitBtn.disabled = true;
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/resultado`, {
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    partido_id: parseInt(partidoId),
+                    goles_local: golesLocal,
+                    goles_visitante: golesVisitante,
+                    goleadores: { local: goleadoresLocal, visitante: goleadoresVisitante }
+                })
+            });
+            const data = await response.json();
+            if (data.success) { 
+                cerrarModal('modalResultado');
+                cargarFixture();
+                cargarResultados();
+                cargarTablaPosiciones();
+                cargarGoleadores();
+                cargarCalendario();
+                alert('✅ Resultado registrado');
+            } else alert('❌ Error: ' + data.error);
+        } catch (error) { alert('❌ Error de conexión'); }
+        finally { submitBtn.textContent = originalText; submitBtn.disabled = false; }
+    });
+
+    // ==================== RESULTADOS ====================
+    async function cargarResultados() {
+        const response = await fetch(`/api/torneo/${torneoId}/fixture`);
+        const data = await response.json();
+        const jugados = data.jugados || [];
+        if (jugados.length === 0) { 
+            document.getElementById('resultadosList').innerHTML = '<p class="info-mensaje">No hay partidos jugados</p>'; 
+            return; 
+        }
+        let html = `<div class="table-container"><tr><thead><tr><th>Local</th><th style="text-align:center">Resultado</th><th>Visitante</th><th>Goleadoras</th><th style="text-align:center">Fecha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        for (const p of jugados) {
+            let goleadoresHtml = '';
+            if (p.goleadores_local?.length) goleadoresHtml += `<div><span style="color:var(--primary);">🏠 ${p.goleadores_local.map(g => g.nombre).join(', ')}</span></div>`;
+            if (p.goleadores_visitante?.length) goleadoresHtml += `<div><span style="color:var(--warning);">✈️ ${p.goleadores_visitante.map(g => g.nombre).join(', ')}</span></div>`;
+            if (!goleadoresHtml) goleadoresHtml = '<span style="color:gray;">Sin goleadoras</span>';
+            html += `<tr>
+                <td><strong>${escapeHtml(p.nombre_local)}</strong></td>
+                <td style="text-align:center;font-weight:bold;color:var(--primary);font-size:18px">${p.goles_local || 0} - ${p.goles_visitante || 0}</td>
+                <td><strong>${escapeHtml(p.nombre_visitante)}</strong></td>
+                <td>${goleadoresHtml}</td>
+                <td style="text-align:center">${p.fecha || 'Por definir'}</td>
+                <td style="text-align:center">
+                    <button class="btn-small btn-info" onclick="window.open('/resumen_partido/${torneoId}/${p.id}', '_blank')">📄</button>
+                    <button class="btn-small btn-info" onclick="window.location.href='/informe_arbitral/${torneoId}/${p.id}'">📋</button>
+                    <button class="btn-small btn-secondary" onclick="window.open('/imprimir_resumen/${torneoId}/${p.id}', '_blank')">🖨️</button>
+                </td>
+            </tr>`;
+        }
+        html += `</tbody></table></div>`;
+        document.getElementById('resultadosList').innerHTML = html;
+    }
+
+    // ==================== TABLA DE POSICIONES (VERSIÓN CORREGIDA) ====================
+    async function cargarTablaPosiciones() {
+        const response = await fetch(`/api/torneo/${torneoId}/tabla`);
+        const tabla = await response.json();
+        if (tabla.length === 0) { 
+            document.getElementById('tablaPosiciones').innerHTML = '<p class="info-mensaje">No hay datos disponibles. Espera a que se jueguen partidos.</p>'; 
+            return; 
+        }
+        
+        let html = `
+            <div class="table-container">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;">
+                            <th style="text-align: center; width: 60px;">Pos</th>
+                            <th style="text-align: left;">Equipo</th>
+                            <th style="text-align: center; width: 50px;">PJ</th>
+                            <th style="text-align: center; width: 50px;">G</th>
+                            <th style="text-align: center; width: 50px;">E</th>
+                            <th style="text-align: center; width: 50px;">P</th>
+                            <th style="text-align: center; width: 50px;">GF</th>
+                            <th style="text-align: center; width: 50px;">GC</th>
+                            <th style="text-align: center; width: 60px;">DG</th>
+                            <th style="text-align: center; width: 70px;">Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        tabla.forEach((e, idx) => { 
+            let clase = '';
+            let medalla = '';
+            if (idx === 0) { 
+                clase = 'pos-1'; 
+                medalla = ' 👑'; 
+            } else if (idx === 1) { 
+                clase = 'pos-2'; 
+                medalla = ' 🥈'; 
+            } else if (idx === 2) { 
+                clase = 'pos-3'; 
+                medalla = ' 🥉'; 
+            }
+            
+            html += `
+                <tr class="${clase}" style="border-bottom: 1px solid var(--gray-200);">
+                    <td style="text-align: center; font-weight: bold; padding: 12px;">${idx+1}${medalla}</td>
+                    <td style="text-align: left; font-weight: bold; padding: 12px;">${escapeHtml(e.nombre)}</td>
+                    <td style="text-align: center; padding: 12px;">${e.pj || 0}</td>
+                    <td style="text-align: center; padding: 12px;">${e.g || 0}</td>
+                    <td style="text-align: center; padding: 12px;">${e.e || 0}</td>
+                    <td style="text-align: center; padding: 12px;">${e.p || 0}</td>
+                    <td style="text-align: center; padding: 12px;">${e.gf || 0}</td>
+                    <td style="text-align: center; padding: 12px;">${e.gc || 0}</td>
+                    <td style="text-align: center; padding: 12px;">${e.dg || 0}</td>
+                    <td style="text-align: center; padding: 12px; font-weight: bold; background: #d1fae5; border-radius: 8px;">${e.pts || 0}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        document.getElementById('tablaPosiciones').innerHTML = html;
+    }
+
+    // ==================== GOLEADORES ====================
+    async function cargarGoleadores() {
+        const response = await fetch(`/api/torneo/${torneoId}/ranking/goleadores?limite=15`);
+        const goleadores = await response.json();
+        if (goleadores.length === 0) { 
+            document.getElementById('rankingGoleadores').innerHTML = '<p class="info-mensaje">No hay goles registrados</p>'; 
+            return; 
+        }
+        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"><table><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
+        goleadores.forEach((g, idx) => {
+            let medalla = idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':'';
+            html += `<tr>
+                <td style="text-align:center; font-weight:bold;">${medalla} ${idx+1}</td>
+                <td><strong>${escapeHtml(g.nombre)}</strong>${g.nombre_abreviado?`<br><small>${escapeHtml(g.nombre_abreviado)}</small>`:''}</td>
+                <td style="text-align:center; font-size:24px; font-weight:bold; color:var(--primary);">${g.goles}</td>
+                <td>${escapeHtml(g.equipo)}</td>
+                <td style="text-align:center;">#${g.numero||'-'}</td>
+            </tr>`;
+        });
+        html += `</tbody></table></div>`;
+        document.getElementById('rankingGoleadores').innerHTML = html;
+    }
+
+    // ==================== CALENDARIO ====================
+    async function cargarCalendario() {
+        const response = await fetch(`/api/torneo/${torneoId}/fixture`);
+        const data = await response.json();
+        const pendientes = data.pendientes || [];
+        const jugados = data.jugados || [];
+        const todos = [...pendientes, ...jugados];
+        
+        if (todos.length === 0) { 
+            document.getElementById('calendarioList').innerHTML = '<p class="info-mensaje">No hay partidos programados</p>'; 
+            return; 
+        }
+        
+        // Ordenar por fecha
+        todos.sort((a, b) => {
+            if (a.fecha && b.fecha) return a.fecha.localeCompare(b.fecha);
+            if (a.fecha) return -1;
+            if (b.fecha) return 1;
+            return a.id - b.id;
+        });
+        
+        let html = `
+            <div class="table-container">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;">
+                            <th style="text-align: center;">Fecha</th>
+                            <th style="text-align: center;">Hora</th>
+                            <th>Equipo Local</th>
+                            <th style="text-align: center;">Resultado</th>
+                            <th>Equipo Visitante</th>
+                            <th>Cancha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        for (const p of todos) {
+            const fechaMostrar = p.fecha || 'Por definir';
+            const horaMostrar = p.hora || 'Por definir';
+            const canchaMostrar = p.cancha || 'Por definir';
+            const resultado = p.jugado ? `${p.goles_local || 0} - ${p.goles_visitante || 0}` : '⏳ Pendiente';
+            const resultadoStyle = p.jugado ? 'font-weight: bold; color: var(--primary);' : 'color: var(--warning);';
+            
+            html += `
+                <tr>
+                    <td style="text-align: center;">${escapeHtml(fechaMostrar)}</td>
+                    <td style="text-align: center;">${escapeHtml(horaMostrar)}</td>
+                    <td><strong>${escapeHtml(p.nombre_local)}</strong></td>
+                    <td style="text-align: center; ${resultadoStyle}">${resultado}</td>
+                    <td><strong>${escapeHtml(p.nombre_visitante)}</strong></td>
+                    <td>${escapeHtml(canchaMostrar)}</td>
+                </tr>
+            `;
+        }
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        document.getElementById('calendarioList').innerHTML = html;
+    }
+
+    // ==================== PLAYOFFS ====================
+    async function generarPlayoffs() {
+        if (!confirm('⚠️ ¿Generar playoffs?\n\nClasificarán los 4 primeros equipos.\nSemifinales ida/vuelta → Final única.')) return;
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Generando...';
+        btn.disabled = true;
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/generar_playoffs`, { method: 'POST' });
+            const data = await response.json();
+            if (data.success) {
+                alert(data.mensaje);
+                cargarPlayoffs();
+            } else alert('❌ Error: ' + data.error);
+        } catch (error) { alert('❌ Error de conexión'); }
+        finally { btn.textContent = originalText; btn.disabled = false; }
+    }
+
+    async function cargarPlayoffs() {
+        const response = await fetch(`/api/torneo/${torneoId}/playoffs`);
+        const playoffs = await response.json();
+        
+        if (!playoffs || Object.keys(playoffs).length === 0 || !playoffs.clasificados) {
+            document.getElementById('clasificadosPlayoffs').style.display = 'none';
+            document.getElementById('llavesContainer').style.display = 'none';
+            document.getElementById('clasificadosPlayoffs').innerHTML = '<p class="info-mensaje">🏆 Los playoffs se generarán al finalizar la liga (completa los 5 partidos de cada equipo)</p>';
+            return;
+        }
+        
+        // Mostrar clasificados
+        document.getElementById('clasificadosPlayoffs').style.display = 'block';
+        let html = `<table style="width:100%"><thead><tr><th style="text-align:center">Pos</th><th>Equipo</th><th style="text-align:center">Puntos</th><th>Clasificación</th></tr></thead><tbody>`;
+        playoffs.clasificados.forEach(c => {
+            let clase = c.posicion === 1 ? 'pos-1' : c.posicion === 2 ? 'pos-2' : c.posicion === 3 ? 'pos-3' : 'pos-4';
+            html += `<tr class="${clase}">
+                <td style="text-align:center; font-weight:bold">${c.posicion}º</td>
+                <td><strong>${escapeHtml(c.nombre)}</strong></td>
+                <td style="text-align:center">${c.puntos} pts</td>
+                <td>${c.posicion === 1 ? '🏆 Líder' : c.posicion === 2 ? '🥈 Sub-líder' : c.posicion === 3 ? '🥉 Tercero' : '✅ Clasificado'}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        document.getElementById('clasificadosPlayoffs').innerHTML = html;
+        
+        // Mostrar llaves
+        if (playoffs.semifinales) {
+            document.getElementById('llavesContainer').style.display = 'flex';
+            document.getElementById('llavesContainer').innerHTML = generarLlaves(playoffs);
+        }
+    }
+
+    function generarLlaves(playoffs) {
+        const sf1 = playoffs.semifinales.llave1;
+        const sf2 = playoffs.semifinales.llave2;
+        const final = playoffs.final;
+        
+        const sf1Eq1 = sf1.equipo1?.nombre || '???';
+        const sf1Eq2 = sf1.equipo2?.nombre || '???';
+        const sf2Eq1 = sf2.equipo1?.nombre || '???';
+        const sf2Eq2 = sf2.equipo2?.nombre || '???';
+        
+        const sf1G1 = sf1.goles_eq1 !== undefined ? sf1.goles_eq1 : '-';
+        const sf1G2 = sf1.goles_eq2 !== undefined ? sf1.goles_eq2 : '-';
+        const sf2G1 = sf2.goles_eq1 !== undefined ? sf2.goles_eq1 : '-';
+        const sf2G2 = sf2.goles_eq2 !== undefined ? sf2.goles_eq2 : '-';
+        
+        const finalEq1 = final.equipo1?.nombre || '???';
+        const finalEq2 = final.equipo2?.nombre || '???';
+        const finalG1 = final.partido?.goles_local !== undefined ? final.partido.goles_local : '-';
+        const finalG2 = final.partido?.goles_visitante !== undefined ? final.partido.goles_visitante : '-';
+        
+        const campeon = final.campeon_nombre || '';
+        
+        return `
+            <div class="round">
+                <div class="round-title">🏆 SEMIFINALES (IDA/VUELTA)</div>
+                <div class="match">
+                    <div class="match-header">Llave 1 - 1º vs 4º</div>
+                    <div class="team ${sf1.ganador === sf1.equipo1?.id ? 'winner' : ''}">
+                        <span class="team-name">${escapeHtml(sf1Eq1)}</span>
+                        <span class="team-score">${sf1G1}</span>
+                    </div>
+                    <div class="team ${sf1.ganador === sf1.equipo2?.id ? 'winner' : ''}">
+                        <span class="team-name">${escapeHtml(sf1Eq2)}</span>
+                        <span class="team-score">${sf1G2}</span>
+                    </div>
+                    ${!sf1.jugado ? `<div class="match-vs">
+                        <button class="btn-semifinal" onclick="mostrarModalResultadoPlayoff('llave1', 'ida')">📝 Ida</button>
+                        <button class="btn-semifinal" onclick="mostrarModalResultadoPlayoff('llave1', 'vuelta')">📝 Vuelta</button>
+                    </div>` : ''}
+                </div>
+                <div class="match">
+                    <div class="match-header">Llave 2 - 2º vs 3º</div>
+                    <div class="team ${sf2.ganador === sf2.equipo1?.id ? 'winner' : ''}">
+                        <span class="team-name">${escapeHtml(sf2Eq1)}</span>
+                        <span class="team-score">${sf2G1}</span>
+                    </div>
+                    <div class="team ${sf2.ganador === sf2.equipo2?.id ? 'winner' : ''}">
+                        <span class="team-name">${escapeHtml(sf2Eq2)}</span>
+                        <span class="team-score">${sf2G2}</span>
+                    </div>
+                    ${!sf2.jugado ? `<div class="match-vs">
+                        <button class="btn-semifinal" onclick="mostrarModalResultadoPlayoff('llave2', 'ida')">📝 Ida</button>
+                        <button class="btn-semifinal" onclick="mostrarModalResultadoPlayoff('llave2', 'vuelta')">📝 Vuelta</button>
+                    </div>` : ''}
+                </div>
+            </div>
+            <div class="round">
+                <div class="round-title">🏆 FINAL</div>
+                <div class="match">
+                    <div class="team ${final.campeon === final.equipo1?.id ? 'winner' : ''}">
+                        <span class="team-name">${escapeHtml(finalEq1)}</span>
+                        <span class="team-score">${finalG1}</span>
+                    </div>
+                    <div class="team ${final.campeon === final.equipo2?.id ? 'winner' : ''}">
+                        <span class="team-name">${escapeHtml(finalEq2)}</span>
+                        <span class="team-score">${finalG2}</span>
+                    </div>
+                    ${!final.jugado && final.equipo1 ? `<div class="match-vs"><button class="btn-semifinal" onclick="mostrarModalResultadoFinal()">🏆 Registrar Final</button></div>` : ''}
+                </div>
+            </div>
+            ${campeon ? `
+            <div class="campeon-section">
+                <div class="trofeo">🏆</div>
+                <div class="campeon-title">CAMPEÓN</div>
+                <div class="campeon-name">${escapeHtml(campeon)}</div>
+            </div>
+            ` : ''}
+        `;
+    }
+
+    function mostrarModalResultadoPlayoff(llave, tipo) {
+        document.getElementById('playoffLlave').value = llave;
+        document.getElementById('playoffTipo').value = tipo;
+        document.getElementById('playoffEquiposInfo').innerHTML = `📝 Registrar ${tipo === 'ida' ? 'IDA' : 'VUELTA'} - ${llave === 'llave1' ? 'Llave 1 (1º vs 4º)' : 'Llave 2 (2º vs 3º)'}`;
+        document.getElementById('playoffGolesLocal').value = 0;
+        document.getElementById('playoffGolesVisitante').value = 0;
+        document.getElementById('modalResultadoPlayoff').style.display = 'flex';
+    }
+
+    function mostrarModalResultadoFinal() {
+        document.getElementById('playoffLlave').value = 'final';
+        document.getElementById('playoffEquiposInfo').innerHTML = '🏆 REGISTRAR RESULTADO DE LA FINAL 🏆';
+        document.getElementById('playoffGolesLocal').value = 0;
+        document.getElementById('playoffGolesVisitante').value = 0;
+        document.getElementById('modalResultadoPlayoff').style.display = 'flex';
+    }
+
+    document.getElementById('formResultadoPlayoff')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const llave = document.getElementById('playoffLlave').value;
+        const tipo = document.getElementById('playoffTipo').value;
+        const golesLocal = parseInt(document.getElementById('playoffGolesLocal').value);
+        const golesVisitante = parseInt(document.getElementById('playoffGolesVisitante').value);
+        
+        let url, body;
+        if (llave === 'final') {
+            url = `/api/torneo/${torneoId}/registrar_final`;
+            body = { goles_local: golesLocal, goles_visitante: golesVisitante };
+        } else {
+            url = `/api/torneo/${torneoId}/registrar_semifinal`;
+            body = { llave: llave, tipo: tipo, goles_local: golesLocal, goles_visitante: golesVisitante };
+        }
+        
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Guardando...';
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const data = await response.json();
+            if (data.success) {
+                cerrarModal('modalResultadoPlayoff');
+                cargarPlayoffs();
+                alert('✅ Resultado registrado');
+            } else alert('❌ Error: ' + (data.error || 'No se pudo registrar'));
+        } catch (error) { alert('❌ Error de conexión'); }
+        finally { btn.textContent = originalText; btn.disabled = false; }
+    });
+
+    // ==================== FUNCIONES AUXILIARES ====================
+    function imprimirCalendario() { window.open(`/imprimir_calendario/${torneoId}`, '_blank'); }
+    function verJugadores(equipoId) { document.getElementById('equipoJugadoresSelect').value = equipoId; equipoSeleccionadoJugadores = equipoId; showTab('jugadores'); cargarJugadores(); }
+    function verCuerpoTecnicoEquipo(equipoId) { document.getElementById('equipoTecnicoSelect').value = equipoId; equipoSeleccionadoTecnico = equipoId; showTab('cuerpo_tecnico'); cargarCuerpoTecnico(); }
+    function escapeHtml(text) { if (!text) return ''; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+</script>
+{% endblock %}

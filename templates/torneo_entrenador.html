@@ -1,0 +1,514 @@
+<!-- templates/torneo_entrenador.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ torneo.nombre }} - Vista Entrenador{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--gray-200);
+        flex-wrap: wrap;
+    }
+    .tab-btn {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--gray-500);
+        transition: all 0.3s;
+    }
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom: 2px solid var(--primary);
+        margin-bottom: -2px;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .equipos-grid {
+        display: grid;
+        gap: 15px;
+        margin-top: 15px;
+    }
+    .equipo-card, .jugador-card, .tecnico-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        border-left: 4px solid var(--primary);
+        box-shadow: var(--shadow);
+    }
+    .table-container {
+        overflow-x: auto;
+        margin: 20px 0;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        background: white;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    th, td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    th {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        font-weight: 600;
+    }
+    tr:hover {
+        background-color: var(--gray-50);
+    }
+    .modo-lectura-badge {
+        background: var(--warning);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: inline-block;
+        margin-left: 15px;
+    }
+    .info-mensaje {
+        text-align: center;
+        padding: 40px;
+        color: var(--gray-500);
+        background: var(--gray-50);
+        border-radius: 12px;
+    }
+    .btn-print {
+        background: var(--primary);
+        color: white;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-print:hover {
+        background: var(--primary-dark);
+    }
+    .btn-small {
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        margin: 2px;
+        background: var(--primary);
+        color: white;
+        transition: all 0.2s;
+    }
+    .btn-small:hover {
+        background: var(--primary-dark);
+    }
+    select.form-control {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--gray-200);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <div>
+            <h1>🏆 {{ torneo.nombre }}</h1>
+            <p>Categoría: {{ torneo.categoria }} | Equipos: {{ torneo.equipos|length }}</p>
+        </div>
+        <div>
+            <span class="modo-lectura-badge">🔍 Modo Solo Lectura</span>
+            <a href="/index_entrenador" class="btn" style="background: rgba(255,255,255,0.2); color: white; margin-left: 10px;">← Volver</a>
+        </div>
+    </div>
+</div>
+
+<div style="padding: 2rem;">
+    <!-- Pestañas -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('equipos')">📋 Equipos</button>
+        <button class="tab-btn" onclick="showTab('jugadores')">👥 Jugadores</button>
+        <button class="tab-btn" onclick="showTab('cuerpo_tecnico')">👨‍🏫 Cuerpo Técnico</button>
+        <button class="tab-btn" onclick="showTab('fixture')">⚽ Fixture</button>
+        <button class="tab-btn" onclick="showTab('resultados')">📊 Resultados</button>
+        <button class="tab-btn" onclick="showTab('tabla')">📈 Tabla de Posiciones</button>
+        <button class="tab-btn" onclick="showTab('goleadores')">⚽ Ranking Goleadores</button>
+        <button class="tab-btn" onclick="showTab('calendario')">📅 Calendario</button>
+        <button class="tab-btn" onclick="showTab('plantillas')">🖨️ Plantillas</button>
+    </div>
+
+    <!-- Tab: Equipos -->
+    <div id="tab-equipos" class="tab-content active">
+        <div id="equiposList" class="equipos-grid">
+            {% if torneo.equipos %}
+                {% for id, equipo in torneo.equipos.items() %}
+                <div class="equipo-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                        <div>
+                            <h3>{{ equipo.nombre }}</h3>
+                            <p style="font-size: 12px; color: var(--gray-500);">
+                                🎽 {{ equipo.jugadores|length }} jugadores | 
+                                👨‍🏫 {{ equipo.cuerpo_tecnico|length }} técnicos
+                                {% if equipo.entrenador %} | 👨‍🏫 Entrenador: {{ equipo.entrenador }}{% endif %}
+                                {% if equipo.estadio %} | 🏟️ {{ equipo.estadio }}{% endif %}
+                            </p>
+                        </div>
+                        <div>
+                            <button class="btn-small" onclick="verJugadores({{ id }})">👥 Ver Jugadores</button>
+                            <button class="btn-small" onclick="verCuerpoTecnicoEquipo({{ id }})">👨‍🏫 Ver Técnicos</button>
+                            <button class="btn-small" onclick="imprimirPlantilla({{ id }})">🖨️ Imprimir Plantilla</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="info-mensaje">No hay equipos registrados aún</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tab: Jugadores -->
+    <div id="tab-jugadores" class="tab-content">
+        <div style="margin-bottom: 20px;">
+            <select id="equipoJugadoresSelect" class="form-control" style="width: auto; display: inline-block; padding: 8px 12px;">
+                <option value="">Seleccionar equipo</option>
+                {% for id, equipo in torneo.equipos.items() %}
+                <option value="{{ id }}">{{ equipo.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div id="jugadoresList"></div>
+    </div>
+
+    <!-- Tab: Cuerpo Técnico -->
+    <div id="tab-cuerpo_tecnico" class="tab-content">
+        <div style="margin-bottom: 20px;">
+            <select id="equipoTecnicoSelect" class="form-control" style="width: auto; display: inline-block; padding: 8px 12px;">
+                <option value="">Seleccionar equipo</option>
+                {% for id, equipo in torneo.equipos.items() %}
+                <option value="{{ id }}">{{ equipo.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div id="tecnicoList"></div>
+    </div>
+
+    <!-- Tab: Fixture -->
+    <div id="tab-fixture" class="tab-content">
+        <div id="fixtureList"></div>
+    </div>
+
+    <!-- Tab: Resultados -->
+    <div id="tab-resultados" class="tab-content">
+        <div id="resultadosList"></div>
+    </div>
+
+    <!-- Tab: Tabla de Posiciones -->
+    <div id="tab-tabla" class="tab-content">
+        <div id="tablaPosiciones"></div>
+    </div>
+
+    <!-- Tab: Goleadores -->
+    <div id="tab-goleadores" class="tab-content">
+        <div id="rankingGoleadores"></div>
+    </div>
+
+    <!-- Tab: Calendario -->
+    <div id="tab-calendario" class="tab-content">
+        <div style="margin-bottom: 15px;">
+            <button class="btn-print" onclick="imprimirCalendario()">🖨️ Imprimir Calendario Completo</button>
+        </div>
+        <div id="calendarioList"></div>
+    </div>
+
+    <!-- Tab: Plantillas -->
+    <div id="tab-plantillas" class="tab-content">
+        <h3 style="margin-bottom: 15px; color: var(--primary);">📋 Imprimir Plantillas de Equipos</h3>
+        <div class="equipos-grid">
+            {% for id, equipo in torneo.equipos.items() %}
+            <div class="equipo-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3>{{ equipo.nombre }}</h3>
+                        <p style="font-size: 12px;">{{ equipo.jugadores|length }} jugadoras | {{ equipo.cuerpo_tecnico|length }} técnicos</p>
+                    </div>
+                    <button class="btn-small" onclick="imprimirPlantilla({{ id }})">🖨️ Imprimir Plantilla</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    const torneoId = '{{ torneo.id }}';
+    let equipoSeleccionadoJugadores = null;
+    let equipoSeleccionadoTecnico = null;
+
+    function showTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        if (event && event.target) event.target.classList.add('active');
+        
+        if (tabName === 'jugadores') cargarJugadores();
+        if (tabName === 'cuerpo_tecnico') cargarCuerpoTecnico();
+        if (tabName === 'fixture') cargarFixture();
+        if (tabName === 'resultados') cargarResultados();
+        if (tabName === 'tabla') cargarTablaPosiciones();
+        if (tabName === 'goleadores') cargarGoleadores();
+        if (tabName === 'calendario') cargarCalendario();
+    }
+
+    // ==================== JUGADORES ====================
+    document.getElementById('equipoJugadoresSelect')?.addEventListener('change', function() {
+        equipoSeleccionadoJugadores = this.value;
+        cargarJugadores();
+    });
+
+    async function cargarJugadores() {
+        if (!equipoSeleccionadoJugadores) {
+            document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">Selecciona un equipo para ver sus jugadores</p>';
+            return;
+        }
+        
+        const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`);
+        const jugadores = await response.json();
+        
+        if (jugadores.length === 0) {
+            document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">No hay jugadores registrados en este equipo</p>';
+            return;
+        }
+        
+        let html = '<div class="table-container"><table><thead><tr><th>#</th><th>Nombre</th><th>Posición</th><th>⚽ Goles</th><th>Documento</th></tr></thead><tbody>';
+        jugadores.forEach(j => {
+            html += `<tr>
+                <td style="text-align: center;"><strong>${j.numero}</strong></td>
+                <td><strong>${escapeHtml(j.nombre)}</strong>${j.nombre_abreviado ? `<br><small style="color: gray;">${escapeHtml(j.nombre_abreviado)}</small>` : ''}</td>
+                <td>${j.posicion}</td>
+                <td style="text-align: center; font-weight: bold; color: var(--primary);">${j.goles || 0}</td>
+                <td>${j.documento || '-'}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        document.getElementById('jugadoresList').innerHTML = html;
+    }
+
+    // ==================== CUERPO TÉCNICO ====================
+    document.getElementById('equipoTecnicoSelect')?.addEventListener('change', function() {
+        equipoSeleccionadoTecnico = this.value;
+        cargarCuerpoTecnico();
+    });
+
+    async function cargarCuerpoTecnico() {
+        if (!equipoSeleccionadoTecnico) {
+            document.getElementById('tecnicoList').innerHTML = '<p class="info-mensaje">Selecciona un equipo para ver su cuerpo técnico</p>';
+            return;
+        }
+        
+        const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoTecnico}/cuerpo_tecnico`);
+        const tecnicos = await response.json();
+        
+        if (tecnicos.length === 0) {
+            document.getElementById('tecnicoList').innerHTML = '<p class="info-mensaje">No hay miembros registrados en el cuerpo técnico</p>';
+            return;
+        }
+        
+        let html = '<div class="table-container"><table><thead><tr><th>Rol</th><th>Nombre</th><th>Documento</th><th>Teléfono</th><th>Email</th></tr></thead><tbody>';
+        tecnicos.forEach(t => {
+            html += `<tr>
+                <td><strong>${escapeHtml(t.rol)}</strong></td>
+                <td>${escapeHtml(t.nombre)}</td>
+                <td>${t.documento || '-'}</td>
+                <td>${t.telefono || '-'}</td>
+                <td>${t.email || '-'}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        document.getElementById('tecnicoList').innerHTML = html;
+    }
+
+    // ==================== FIXTURE ====================
+    async function cargarFixture() {
+        const response = await fetch(`/api/torneo/${torneoId}/fixture`);
+        const data = await response.json();
+        const pendientes = data.pendientes || [];
+        
+        if (pendientes.length === 0) {
+            document.getElementById('fixtureList').innerHTML = '<p class="info-mensaje">No hay partidos programados aún. Espera a que el administrador genere el fixture.</p>';
+            return;
+        }
+        
+        let html = '<div class="table-container"><table><thead><tr><th>Local</th><th>Visitante</th><th>Fecha</th><th>Hora</th><th>Cancha</th></tr></thead><tbody>';
+        pendientes.forEach(p => {
+            html += `<tr>
+                <td><strong>${escapeHtml(p.nombre_local)}</strong></td>
+                <td><strong>${escapeHtml(p.nombre_visitante)}</strong></td>
+                <td>${p.fecha || 'Por definir'}</td>
+                <td>${p.hora || 'Por definir'}</td>
+                <td>${p.cancha || 'Por definir'}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        document.getElementById('fixtureList').innerHTML = html;
+    }
+
+    // ==================== RESULTADOS ====================
+    async function cargarResultados() {
+        const response = await fetch(`/api/torneo/${torneoId}/fixture`);
+        const data = await response.json();
+        const jugados = data.jugados || [];
+        
+        if (jugados.length === 0) {
+            document.getElementById('resultadosList').innerHTML = '<p class="info-mensaje">No hay partidos jugados aún</p>';
+            return;
+        }
+        
+        let html = '<div class="table-container"><table><thead><tr><th>Local</th><th>Resultado</th><th>Visitante</th><th>Fecha</th><th>Resumen</th></tr></thead><tbody>';
+        for (const p of jugados) {
+            let goleadoresHtml = '';
+            if (p.goleadores_local && p.goleadores_local.length > 0) {
+                goleadoresHtml += `<div><small style="color: var(--primary);">🏠 ${p.goleadores_local.map(g => g.nombre).join(', ')}</small></div>`;
+            }
+            if (p.goleadores_visitante && p.goleadores_visitante.length > 0) {
+                goleadoresHtml += `<div><small style="color: var(--warning);">✈️ ${p.goleadores_visitante.map(g => g.nombre).join(', ')}</small></div>`;
+            }
+            
+            html += `<tr>
+                <td><strong>${escapeHtml(p.nombre_local)}</strong><br>${goleadoresHtml}</td>
+                <td style="font-weight: bold; color: var(--primary); text-align: center; font-size: 18px;">${p.goles_local || 0} - ${p.goles_visitante || 0}</td>
+                <td><strong>${escapeHtml(p.nombre_visitante)}</strong></td>
+                <td>${p.fecha || 'Por definir'}</td>
+                <td><button class="btn-small" onclick="window.open('/resumen_partido/${torneoId}/${p.id}', '_blank')">📄 Ver Resumen</button></td>
+            </tr>`;
+        }
+        html += '</tbody></table></div>';
+        document.getElementById('resultadosList').innerHTML = html;
+    }
+
+    // ==================== TABLA DE POSICIONES ====================
+    async function cargarTablaPosiciones() {
+        const response = await fetch(`/api/torneo/${torneoId}/tabla`);
+        const tabla = await response.json();
+        
+        if (tabla.length === 0) {
+            document.getElementById('tablaPosiciones').innerHTML = '<p class="info-mensaje">No hay datos disponibles. Espera a que se jueguen partidos.</p>';
+            return;
+        }
+        
+        let html = '<div class="table-container"><table><thead><tr><th>Pos</th><th>Equipo</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th><th>Pts</th></tr></thead><tbody>';
+        tabla.forEach((e, idx) => {
+            html += `<tr>
+                <td style="text-align: center;"><strong>${idx + 1}</strong>${idx === 0 ? ' 👑' : ''}</td>
+                <td><strong>${escapeHtml(e.nombre)}</strong></td>
+                <td style="text-align: center;">${e.pj}</td>
+                <td style="text-align: center;">${e.g}</td>
+                <td style="text-align: center;">${e.e}</td>
+                <td style="text-align: center;">${e.p}</td>
+                <td style="text-align: center;">${e.gf}</td>
+                <td style="text-align: center;">${e.gc}</td>
+                <td style="text-align: center;">${e.dg}</td>
+                <td style="text-align: center; font-weight: bold; color: var(--primary);">${e.pts}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        document.getElementById('tablaPosiciones').innerHTML = html;
+    }
+
+    // ==================== GOLEADORES ====================
+    async function cargarGoleadores() {
+        const response = await fetch(`/api/torneo/${torneoId}/ranking/goleadores?limite=10`);
+        const goleadores = await response.json();
+        
+        if (goleadores.length === 0) {
+            document.getElementById('rankingGoleadores').innerHTML = '<p class="info-mensaje">No hay goles registrados aún</p>';
+            return;
+        }
+        
+        let html = '<div class="table-container"><table><thead><tr><th>Pos</th><th>Jugador</th><th>Equipo</th><th>Goles</th></tr></thead><tbody>';
+        goleadores.forEach((g, idx) => {
+            let medalla = '';
+            if (idx === 0) medalla = '🥇 ';
+            else if (idx === 1) medalla = '🥈 ';
+            else if (idx === 2) medalla = '🥉 ';
+            html += `<tr>
+                <td style="text-align: center;"><strong>${medalla}${idx + 1}</strong></td>
+                <td><strong>${escapeHtml(g.nombre)}</strong>${g.nombre_abreviado ? `<br><small style="color: gray;">${escapeHtml(g.nombre_abreviado)}</small>` : ''}</td>
+                <td>${escapeHtml(g.equipo)}</td>
+                <td style="text-align: center; font-weight: bold; color: var(--primary);">${g.goles}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        document.getElementById('rankingGoleadores').innerHTML = html;
+    }
+
+    // ==================== CALENDARIO ====================
+    async function cargarCalendario() {
+        const response = await fetch(`/api/torneo/${torneoId}/fixture`);
+        const data = await response.json();
+        const todos = [...(data.pendientes || []), ...(data.jugados || [])];
+        
+        if (todos.length === 0) {
+            document.getElementById('calendarioList').innerHTML = '<p class="info-mensaje">No hay partidos programados aún</p>';
+            return;
+        }
+        
+        todos.sort((a,b) => (a.fecha || '').localeCompare(b.fecha || ''));
+        
+        let html = '<div class="table-container"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Local</th><th>Resultado</th><th>Visitante</th><th>Cancha</th></tr></thead><tbody>';
+        todos.forEach(p => {
+            html += `<tr>
+                <td>${p.fecha || 'Por definir'}</td>
+                <td>${p.hora || 'Por definir'}</td>
+                <td><strong>${escapeHtml(p.nombre_local)}</strong></td>
+                <td style="font-weight: bold;">${p.jugado ? `${p.goles_local || 0} - ${p.goles_visitante || 0}` : '⏳ Pendiente'}</td>
+                <td><strong>${escapeHtml(p.nombre_visitante)}</strong></td>
+                <td>${p.cancha || 'Por definir'}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        document.getElementById('calendarioList').innerHTML = html;
+    }
+
+    // ==================== FUNCIONES AUXILIARES ====================
+    function verJugadores(equipoId) {
+        document.getElementById('equipoJugadoresSelect').value = equipoId;
+        equipoSeleccionadoJugadores = equipoId;
+        showTab('jugadores');
+        cargarJugadores();
+    }
+
+    function verCuerpoTecnicoEquipo(equipoId) {
+        document.getElementById('equipoTecnicoSelect').value = equipoId;
+        equipoSeleccionadoTecnico = equipoId;
+        showTab('cuerpo_tecnico');
+        cargarCuerpoTecnico();
+    }
+
+    function imprimirPlantilla(equipoId) {
+        window.open(`/imprimir_plantilla/${torneoId}/${equipoId}`, '_blank');
+    }
+
+    function imprimirCalendario() {
+        window.open(`/imprimir_calendario/${torneoId}`, '_blank');
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

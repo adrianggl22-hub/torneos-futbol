@@ -1,0 +1,172 @@
+<!-- templates/estadisticas.html -->
+{% extends "base.html" %}
+
+{% block title %}Estadísticas - {{ torneo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="estadisticas-header">
+    <h1>📊 Estadísticas del Torneo</h1>
+    <p>{{ torneo.nombre }}</p>
+</div>
+
+<div class="estadisticas-tabs">
+    <button class="tab-btn active" onclick="showStatTab('goleadores')">⚽ Goleadores</button>
+    <button class="tab-btn" onclick="showStatTab('equipos')">🏆 Tabla de Posiciones</button>
+</div>
+
+<div id="goleadores" class="stat-tab active">
+    <div class="section-card">
+        <h2>⚽ Ranking de Goleadores</h2>
+        <div id="goleadoresList">
+            <div class="loading">Cargando...</div>
+        </div>
+    </div>
+</div>
+
+<div id="equipos" class="stat-tab">
+    <div class="section-card">
+        <h2>🏆 Tabla de Posiciones</h2>
+        <div id="tablaEquipos">
+            <div class="loading">Cargando...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+.estadisticas-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.estadisticas-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    justify-content: center;
+}
+
+.stat-tab {
+    display: none;
+}
+
+.stat-tab.active {
+    display: block;
+}
+
+.goleadores-table, .tabla-equipos {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.goleadores-table th, .goleadores-table td,
+.tabla-equipos th, .tabla-equipos td {
+    padding: 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.goleadores-table th, .tabla-equipos th {
+    background: #f3f4f6;
+    font-weight: 600;
+}
+
+.posicion-1 { background: linear-gradient(135deg, #ffd700, #ffed4e); }
+.posicion-2 { background: linear-gradient(135deg, #c0c0c0, #e8e8e8); }
+.posicion-3 { background: linear-gradient(135deg, #cd7f32, #e8c9a0); }
+
+.medalla {
+    font-size: 1.2rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+</style>
+
+<script>
+const torneoId = '{{ torneo_id }}';
+
+function showStatTab(tabName) {
+    document.querySelectorAll('.stat-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.getElementById(tabName).classList.add('active');
+    
+    document.querySelectorAll('.estadisticas-tabs .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+async function cargarGoleadores() {
+    const response = await fetch(`/api/torneo/${torneoId}/ranking/goleadores?limite=20`);
+    const goleadores = await response.json();
+    
+    const container = document.getElementById('goleadoresList');
+    
+    if (goleadores.length === 0) {
+        container.innerHTML = '<div class="loading">No hay goleadores registrados aún</div>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <table class="goleadores-table">
+            <thead>
+                <tr><th>Pos</th><th>Jugador</th><th>Equipo</th><th>Goles</th><th>#</th><th>Posición</th></tr>
+            </thead>
+            <tbody>
+                ${goleadores.map((gol, index) => `
+                    <tr class="${index < 3 ? `posicion-${index+1}` : ''}">
+                        <td>${index < 3 ? `<span class="medalla">${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</span>` : index+1}</td>
+                        <td><strong>${gol.nombre}</strong></td>
+                        <td>${gol.equipo}</td>
+                        <td style="font-size: 1.2rem; font-weight: bold; color: #2563eb;">${gol.goles}</td>
+                        <td>${gol.numero}</td>
+                        <td>${gol.posicion}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+async function cargarTabla() {
+    const response = await fetch(`/api/torneo/${torneoId}/tabla`);
+    const equipos = await response.json();
+    
+    const container = document.getElementById('tablaEquipos');
+    
+    if (equipos.length === 0) {
+        container.innerHTML = '<div class="loading">No hay equipos registrados</div>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <table class="tabla-equipos">
+            <thead>
+                <tr>
+                    <th>Pos</th><th>Equipo</th><th>PJ</th><th>G</th><th>E</th><th>P</th>
+                    <th>GF</th><th>GC</th><th>DG</th><th>Pts</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${equipos.map((equipo, index) => `
+                    <tr class="${index < 3 ? `posicion-${index+1}` : ''}">
+                        <td>${index < 3 ? `<span class="medalla">${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</span>` : index+1}</td>
+                        <td><strong>${equipo.nombre}</strong></td>
+                        <td>${equipo.pj}</td><td>${equipo.g}</td><td>${equipo.e}</td><td>${equipo.p}</td>
+                        <td>${equipo.gf}</td><td>${equipo.gc}</td><td>${equipo.dg}</td>
+                        <td style="font-size: 1.2rem; font-weight: bold; color: #2563eb;">${equipo.puntos}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+cargarGoleadores();
+cargarTabla();
+</script>
+{% endblock %}

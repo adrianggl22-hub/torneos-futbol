@@ -1,0 +1,284 @@
+<!-- templates/index_entrenador.html -->
+{% extends "base.html" %}
+
+{% block title %}Panel de Entrenador - Torneos de Fútbol{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1>👨‍🏫 Panel de Entrenador</h1>
+    <p>Visualiza la información de los torneos (Modo Solo Lectura)</p>
+    <div class="modo-lectura-badge" style="display: inline-block; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; margin-top: 15px;">
+        🔍 Modo Solo Lectura - No puedes modificar datos
+    </div>
+</div>
+
+<div style="padding: 2rem;">
+    <div style="background: #fef3c7; border-left: 4px solid var(--warning); padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+        <p style="margin: 0;">ℹ️ Como entrenador o invitado, puedes ver toda la información pero no modificar datos.</p>
+    </div>
+
+    <!-- ==================== SECCIÓN: INFORMACIÓN DEL CAMPEONATO (SOLO LECTURA) ==================== -->
+    <div class="campeonato-info-section">
+        <div class="campeonato-header">
+            <h2><i class="fas fa-trophy"></i> Información del Campeonato</h2>
+        </div>
+        <div id="campeonatoInfoContent" class="campeonato-content">
+            <div class="info-loading">Cargando información...</div>
+        </div>
+    </div>
+    
+    <h2 style="margin-bottom: 20px; color: white;">🏟️ Torneos Activos</h2>
+    <div class="torneos-grid">
+        {% if torneos %}
+            {% for id, torneo in torneos.items() %}
+            <div class="torneo-card">
+                <h3>{{ torneo.nombre }}</h3>
+                <div class="torneo-stats">
+                    <span>📊 {{ torneo.equipos|length }} equipos</span>
+                    <span>⚽ {{ torneo.partidos|length }} partidos</span>
+                    <span>✅ {{ torneo.partidos.values()|selectattr('jugado')|list|length }} jugados</span>
+                </div>
+                <div style="margin-bottom: 15px; font-size: 12px; color: var(--accent);">
+                    🏆 Categoría: {{ torneo.categoria }}
+                </div>
+                <a href="/torneo_entrenador/{{ id }}" class="btn btn-primary">👁️ Ver Torneo</a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="info-mensaje">No hay torneos creados aún.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .torneos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+    .torneo-card {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        transition: transform 0.2s;
+    }
+    .torneo-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    .torneo-card h3 {
+        color: var(--primary);
+        margin-bottom: 0.75rem;
+    }
+    .torneo-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        margin-bottom: 0.75rem;
+    }
+    .info-mensaje {
+        text-align: center;
+        padding: 40px;
+        background: white;
+        border-radius: 1rem;
+        color: var(--gray-500);
+    }
+
+    /* ==================== ESTILOS PARA SECCIÓN DE INFORMACIÓN ==================== */
+    .campeonato-info-section {
+        background: white;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--gray-200);
+    }
+
+    .campeonato-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--primary);
+    }
+
+    .campeonato-header h2 {
+        font-size: 1.5rem;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+
+    .campeonato-content {
+        line-height: 1.6;
+    }
+
+    .info-titulo {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .info-subtitulo {
+        font-size: 1.1rem;
+        color: var(--accent);
+        margin-bottom: 1.5rem;
+        font-weight: 500;
+    }
+
+    .info-card {
+        background: var(--gray-50);
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--primary);
+    }
+
+    .info-card h4 {
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-card p {
+        margin: 0;
+        color: var(--gray-700);
+        white-space: pre-wrap;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .info-loading {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray-500);
+    }
+
+    .info-vacio {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray-500);
+        background: var(--gray-50);
+        border-radius: 0.75rem;
+    }
+
+    .info-vacio i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: var(--gray-400);
+    }
+
+    @media (max-width: 768px) {
+        .info-titulo {
+            font-size: 1.3rem;
+        }
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+// ==================== GESTIÓN DE INFORMACIÓN DEL CAMPEONATO (SOLO LECTURA) ====================
+
+// Cargar información guardada al cargar la página
+function cargarInfoCampeonato() {
+    const infoGuardada = localStorage.getItem('campeonatoInfo');
+    const container = document.getElementById('campeonatoInfoContent');
+    
+    if (infoGuardada) {
+        const info = JSON.parse(infoGuardada);
+        mostrarInfoCampeonato(info);
+    } else {
+        // Mostrar información por defecto
+        mostrarInfoPorDefecto();
+    }
+}
+
+function mostrarInfoCampeonato(info) {
+    const container = document.getElementById('campeonatoInfoContent');
+    
+    let html = `
+        <div class="info-titulo">${escapeHtml(info.titulo || 'Campeonato de Fútbol')}</div>
+        <div class="info-subtitulo">${escapeHtml(info.subtitulo || 'Torneo Femenino')}</div>
+        
+        <div class="info-grid">
+    `;
+    
+    if (info.formato) {
+        html += `
+            <div class="info-card">
+                <h4><i class="fas fa-sitemap"></i> Formato de Competencia</h4>
+                <p>${escapeHtml(info.formato).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    if (info.fechas) {
+        html += `
+            <div class="info-card">
+                <h4><i class="fas fa-calendar-alt"></i> Fechas Importantes</h4>
+                <p>${escapeHtml(info.fechas).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    if (info.reglas) {
+        html += `
+            <div class="info-card">
+                <h4><i class="fas fa-gavel"></i> Reglas del Torneo</h4>
+                <p>${escapeHtml(info.reglas).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    if (info.contacto) {
+        html += `
+            <div class="info-card">
+                <h4><i class="fas fa-phone-alt"></i> Contacto / Información de Pago</h4>
+                <p>${escapeHtml(info.contacto).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+function mostrarInfoPorDefecto() {
+    const container = document.getElementById('campeonatoInfoContent');
+    container.innerHTML = `
+        <div class="info-vacio">
+            <i class="fas fa-info-circle"></i>
+            <p>No hay información configurada aún.</p>
+            <p>El administrador puede agregar las reglas, formato y fechas del campeonato.</p>
+        </div>
+    `;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Cargar información al iniciar la página
+document.addEventListener('DOMContentLoaded', cargarInfoCampeonato);
+</script>
+{% endblock %}

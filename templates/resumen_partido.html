@@ -1,0 +1,214 @@
+<!-- templates/resumen_partido.html -->
+{% extends "base.html" %}
+
+{% block title %}Resumen del Partido{% endblock %}
+
+{% block content %}
+<div class="resumen-header">
+    <h1>📋 Resumen del Partido</h1>
+    <button onclick="window.print()" class="btn btn-primary">🖨️ Imprimir / Guardar PDF</button>
+    <a href="/imprimir_resumen/{{ torneo_id }}/{{ resumen.partido.id }}" class="btn btn-success">📄 Descargar PDF</a>
+</div>
+
+<div class="resumen-card">
+    <div class="partido-titulo">
+        <h2>{{ resumen.partido.nombre_local }} vs {{ resumen.partido.nombre_visitante }}</h2>
+        <div class="resultado-final">
+            <span class="resultado">{{ resumen.partido.goles_local }}</span>
+            <span class="separador">-</span>
+            <span class="resultado">{{ resumen.partido.goles_visitante }}</span>
+        </div>
+    </div>
+
+    <div class="partido-info">
+        <div class="info-item">📅 Fecha: {{ resumen.partido.fecha }}</div>
+        <div class="info-item">⏰ Hora: {{ resumen.partido.hora }}</div>
+        <div class="info-item">🏟️ Cancha: {{ resumen.partido.cancha or "No especificada" }}</div>
+    </div>
+
+    <div class="goleadores-section">
+        <h3>⚽ Goleadores</h3>
+        <div class="goleadores-grid">
+            <div class="equipo-goleadores">
+                <h4>{{ resumen.partido.nombre_local }}</h4>
+                {% if resumen.goleadores.local %}
+                    <ul>
+                        {% for gol in resumen.goleadores.local %}
+                            <li>{{ gol.nombre }} ⚽ ({{ gol.minuto }}')</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No hubo goleadores</p>
+                {% endif %}
+            </div>
+            <div class="equipo-goleadores">
+                <h4>{{ resumen.partido.nombre_visitante }}</h4>
+                {% if resumen.goleadores.visitante %}
+                    <ul>
+                        {% for gol in resumen.goleadores.visitante %}
+                            <li>{{ gol.nombre }} ⚽ ({{ gol.minuto }}')</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No hubo goleadores</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if resumen.partido.amonestados_local or resumen.partido.amonestados_visitante %}
+    <div class="amonestaciones-section">
+        <h3>🟨 Amonestaciones</h3>
+        <div class="amonestaciones-grid">
+            <div class="equipo-amones">
+                <h4>{{ resumen.partido.nombre_local }}</h4>
+                {% if resumen.partido.amonestados_local %}
+                    <ul>
+                        {% for amon in resumen.partido.amonestados_local %}
+                            <li>{{ amon.nombre }} {{ '🟨' if amon.tipo == 'amarilla' else '🟥' }} ({{ amon.minuto }}')</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Sin amonestaciones</p>
+                {% endif %}
+            </div>
+            <div class="equipo-amones">
+                <h4>{{ resumen.partido.nombre_visitante }}</h4>
+                {% if resumen.partido.amonestados_visitante %}
+                    <ul>
+                        {% for amon in resumen.partido.amonestados_visitante %}
+                            <li>{{ amon.nombre }} {{ '🟨' if amon.tipo == 'amarilla' else '🟥' }} ({{ amon.minuto }}')</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Sin amonestaciones</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.resumen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.resumen-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+.partido-titulo {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.resultado-final {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    font-size: 3rem;
+    font-weight: bold;
+    margin-top: 1rem;
+}
+
+.resultado {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 1rem;
+    min-width: 100px;
+    text-align: center;
+}
+
+.separador {
+    font-size: 2rem;
+    color: #6b7280;
+}
+
+.partido-info {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #f3f4f6;
+    border-radius: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.info-item {
+    font-size: 1rem;
+    color: #374151;
+}
+
+.goleadores-section, .amonestaciones-section {
+    margin-top: 2rem;
+}
+
+.goleadores-grid, .amonestaciones-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.equipo-goleadores h4, .equipo-amones h4 {
+    color: #2563eb;
+    margin-bottom: 0.5rem;
+}
+
+.equipo-goleadores ul, .equipo-amones ul {
+    list-style: none;
+    padding: 0;
+}
+
+.equipo-goleadores li, .equipo-amones li {
+    padding: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+@media print {
+    .resumen-header {
+        display: none;
+    }
+    
+    .btn, .btn-primary, .btn-success {
+        display: none;
+    }
+    
+    .resumen-card {
+        box-shadow: none;
+        padding: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .goleadores-grid, .amonestaciones-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .resultado-final {
+        font-size: 2rem;
+        gap: 1rem;
+    }
+    
+    .resultado {
+        padding: 0.25rem 1rem;
+        min-width: 70px;
+    }
+}
+</style>
+{% endblock %}

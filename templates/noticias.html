@@ -1,0 +1,189 @@
+<!-- templates/noticias.html -->
+{% extends "base.html" %}
+
+{% block title %}Noticias - {{ torneo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="noticias-header">
+    <h1>📰 Noticias y Novedades</h1>
+    <p>Mantente informado sobre {{ torneo.nombre }}</p>
+</div>
+
+<div class="noticias-container">
+    <div class="noticias-grid" id="noticiasGrid">
+        <div class="loading">Cargando noticias...</div>
+    </div>
+</div>
+
+<div class="add-news-section" id="addNewsSection" style="display: none;">
+    <div class="section-card">
+        <h2>📝 Publicar Noticia</h2>
+        <form id="addNewsForm">
+            <div class="form-group">
+                <input type="text" id="noticiaTitulo" placeholder="Título" required>
+            </div>
+            <div class="form-group">
+                <select id="noticiaTipo">
+                    <option value="noticia">📰 Noticia</option>
+                    <option value="foto">📸 Foto</option>
+                    <option value="video">🎥 Video</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <textarea id="noticiaContenido" rows="4" placeholder="Contenido..." required></textarea>
+            </div>
+            <div class="form-group">
+                <input type="text" id="noticiaUrl" placeholder="URL de imagen/video (opcional)">
+            </div>
+            <button type="submit" class="btn btn-primary">Publicar</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.noticias-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.noticias-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.noticia-card {
+    background: white;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.noticia-card:hover {
+    transform: translateY(-5px);
+}
+
+.noticia-media {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background: #f3f4f6;
+}
+
+.noticia-content {
+    padding: 1.5rem;
+}
+
+.noticia-tipo {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+}
+
+.tipo-noticia { background: #dbeafe; color: #1e40af; }
+.tipo-foto { background: #dcfce7; color: #166534; }
+.tipo-video { background: #fee2e2; color: #991b1b; }
+
+.noticia-titulo {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.noticia-fecha {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 1rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background: white;
+}
+</style>
+
+<script>
+const torneoId = '{{ torneo_id }}';
+
+async function cargarNoticias() {
+    const response = await fetch(`/api/torneo/${torneoId}/noticias`);
+    const noticias = await response.json();
+    
+    const grid = document.getElementById('noticiasGrid');
+    
+    if (noticias.length === 0) {
+        grid.innerHTML = '<div class="loading">No hay noticias aún. ¡Sé el primero en publicar!</div>';
+        return;
+    }
+    
+    grid.innerHTML = noticias.map(noticia => `
+        <div class="noticia-card">
+            ${noticia.url_media ? `<img src="${noticia.url_media}" class="noticia-media" alt="${noticia.titulo}">` : ''}
+            <div class="noticia-content">
+                <span class="noticia-tipo tipo-${noticia.tipo}">
+                    ${noticia.tipo === 'noticia' ? '📰 Noticia' : noticia.tipo === 'foto' ? '📸 Foto' : '🎥 Video'}
+                </span>
+                <h3 class="noticia-titulo">${noticia.titulo}</h3>
+                <p>${noticia.contenido}</p>
+                <div class="noticia-fecha">📅 ${noticia.fecha}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Verificar si es administrador (por simplicidad, mostramos el formulario)
+// En producción, esto debería tener autenticación
+const adminKey = prompt("¿Eres administrador? Ingresa la clave (admin123 para publicar):");
+if (adminKey === 'admin123') {
+    document.getElementById('addNewsSection').style.display = 'block';
+}
+
+document.getElementById('addNewsForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const noticia = {
+        titulo: document.getElementById('noticiaTitulo').value,
+        contenido: document.getElementById('noticiaContenido').value,
+        tipo: document.getElementById('noticiaTipo').value,
+        url_media: document.getElementById('noticiaUrl').value
+    };
+    
+    const response = await fetch(`/api/torneo/${torneoId}/noticias`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(noticia)
+    });
+    
+    if (response.ok) {
+        alert('✅ Noticia publicada');
+        document.getElementById('addNewsForm').reset();
+        cargarNoticias();
+    } else {
+        alert('❌ Error al publicar');
+    }
+});
+
+cargarNoticias();
+</script>
+{% endblock %}

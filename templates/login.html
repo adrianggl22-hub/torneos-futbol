@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCRD Puriscal · Iniciar Sesión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+    }
+
+    :root {
+      --primary-color: #0f3460;
+      --primary-dark: #0a2540;
+      --accent-color: #00b4d8;
+      --accent-light: #48cae4;
+      --card-bg: #ffffff;
+      --text-dark: #1a1a2e;
+      --text-soft: #4a5568;
+      --border-light: rgba(15, 52, 96, 0.15);
+      --shadow-card: 0 25px 45px -12px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.02);
+    }
+
+    .login-container {
+      max-width: 460px;
+      width: 100%;
+      background: var(--card-bg);
+      border-radius: 2rem;
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    .login-header {
+      background: linear-gradient(135deg, var(--primary-color) 0%, #1a4a6f 100%);
+      padding: 2rem 2rem 1.8rem;
+      text-align: center;
+      color: white;
+    }
+
+    .club-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(2px);
+      padding: 0.4rem 1.2rem;
+      border-radius: 60px;
+      margin-bottom: 1rem;
+    }
+
+    .club-badge i {
+      font-size: 1.6rem;
+      color: var(--accent-color);
+    }
+
+    .club-badge span {
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      font-size: 0.9rem;
+    }
+
+    .login-header h1 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 0.25rem;
+    }
+
+    .login-header p {
+      font-size: 0.9rem;
+      opacity: 0.85;
+    }
+
+    .login-body {
+      padding: 2rem 2rem 2rem 2rem;
+    }
+
+    .flash-message {
+      background: #E8F0E6;
+      border-left: 4px solid #2C7A47;
+      border-radius: 1rem;
+      padding: 0.8rem 1rem;
+      margin-bottom: 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .flash-message.danger, .flash-message.error {
+      background: #FDECEA;
+      border-left-color: #C7362B;
+      color: #9B2E24;
+    }
+
+    .flash-message.success {
+      background: #E3F5EC;
+      border-left-color: #2E7D5E;
+      color: #1E5631;
+    }
+
+    .flash-message.warning {
+      background: #FEF3C7;
+      border-left-color: #D97706;
+      color: #92400E;
+    }
+
+    .input-group {
+      margin-bottom: 1.6rem;
+    }
+
+    .input-group label {
+      display: block;
+      font-weight: 600;
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      background: white;
+      border: 1.5px solid var(--border-light);
+      border-radius: 1.2rem;
+      padding: 0.4rem 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .input-wrapper i {
+      color: var(--accent-color);
+      font-size: 1.1rem;
+      width: 28px;
+    }
+
+    .input-wrapper input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      padding: 0.8rem 0;
+      font-size: 1rem;
+      font-weight: 500;
+      outline: none;
+      color: var(--text-dark);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .input-wrapper input::placeholder {
+      color: #B9A18C;
+      font-weight: 400;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.2);
+    }
+
+    .login-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary-color) 0%, #1a4a6f 100%);
+      border: none;
+      padding: 1rem;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 2rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 0.5rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .login-btn:hover {
+      background: linear-gradient(135deg, #0a2540 0%, #0f3460 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 20px -10px rgba(15, 52, 96, 0.4);
+    }
+
+    .extra-links {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1rem;
+      font-size: 0.8rem;
+    }
+
+    .extra-links a {
+      color: var(--text-soft);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .extra-links a:hover {
+      color: var(--accent-color);
+    }
+
+    .login-footer {
+      background: #f7f9fc;
+      padding: 1.2rem 2rem;
+      text-align: center;
+      border-top: 1px solid rgba(15, 52, 96, 0.1);
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 1rem 0;
+      color: #CBAF84;
+      font-size: 0.7rem;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(15, 52, 96, 0.2);
+    }
+
+    .divider-text {
+      padding: 0 10px;
+    }
+
+    @media (max-width: 500px) {
+      .login-body {
+        padding: 1.5rem;
+      }
+      .login-header h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-header">
+    <div class="club-badge">
+      <i class="fas fa-futbol"></i>
+      <span>Login</span>
+    </div>
+    <h1>Iniciar Sesión</h1>
+    <p>Ingresa tus credenciales</p>
+  </div>
+
+  <div class="login-body">
+    <!-- Mostrar mensajes flash de Flask -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash-message {{ category }}">
+            <i class="fas fa-{% if category in ['danger', 'error'] %}exclamation-triangle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      <div class="input-group">
+        <label><i class="fas fa-user"></i> Username</label>
+        <div class="input-wrapper">
+          <i class="fas fa-user-circle"></i>
+          <input type="text" name="username" placeholder="Ingresa tu usuario" required autofocus>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label><i class="fas fa-lock"></i> Password</label>
+        <div class="input-wrapper">
+          <i class="fas fa-key"></i>
+          <input type="password" name="password" placeholder="Ingresa tu contraseña" required>
+        </div>
+      </div>
+
+      <button type="submit" class="login-btn">
+        <i class="fas fa-sign-in-alt"></i> Let me in.
+      </button>
+      
+      <div class="extra-links">
+        <a href="#"><i class="far fa-question-circle"></i> ¿Olvidaste tu contraseña?</a>
+        <a href="{{ url_for('login') }}"><i class="fas fa-home"></i> Volver al inicio</a>
+      </div>
+      
+      <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-text">ACCESO SEGURO</div>
+        <div class="divider-line"></div>
+      </div>
+      <p style="font-size: 0.7rem; text-align: center; color: #9B7B5C;">Área restringida para personal autorizado</p>
+    </form>
+  </div>
+
+  <div class="login-footer">
+    <i class="fas fa-shield-alt"></i> CCRD Puriscal · Sistema de gestión deportiva<br>
+    <span style="opacity: 0.6;">Fútbol Femenino · Temporada 2026</span>
+  </div>
+</div>
+
+</body>
+</html>

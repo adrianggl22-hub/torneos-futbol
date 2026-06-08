@@ -1,0 +1,664 @@
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block title %}Inicio - Torneos de Fútbol{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1>Sistema de Administración de Torneos de Fútbol</h1>
+    <p>Organiza, gestiona y sigue tus torneos de manera fácil y profesional</p>
+</div>
+
+<div class="dashboard-grid">
+    <div class="create-torneo-card">
+        <h2>Crear Nuevo Torneo</h2>
+        <form id="crearTorneoForm">
+            <div class="form-group">
+                <input type="text" id="nombreTorneo" placeholder="Nombre del torneo" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Crear Torneo</button>
+        </form>
+    </div>
+
+    <div class="proximos-partidos-card">
+        <h2>📅 Próximos Partidos</h2>
+        <div id="proximosPartidos">
+            <p class="info-mensaje">Selecciona un torneo para ver los próximos partidos</p>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== NUEVA SECCIÓN: INFORMACIÓN DEL CAMPEONATO ==================== -->
+<div class="campeonato-info-section">
+    <div class="campeonato-header">
+        <h2><i class="fas fa-trophy"></i> Información del Campeonato</h2>
+        <button class="btn-edit-info" onclick="mostrarModalEditarInfo()">
+            <i class="fas fa-edit"></i> Editar Información
+        </button>
+    </div>
+    
+    <div id="campeonatoInfoContent" class="campeonato-content">
+        <div class="info-loading">Cargando información...</div>
+    </div>
+</div>
+
+<div class="torneos-section">
+    <h2>Torneos Activos</h2>
+    <div id="torneosList" class="torneos-grid">
+        {% if torneos %}
+            {% for id, torneo in torneos.items() %}
+            <div class="torneo-card" data-id="{{ id }}">
+                <h3>{{ torneo.nombre }}</h3>
+                <div class="torneo-stats">
+                    <span>📊 {{ torneo.equipos|length }} equipos</span>
+                    <span>⚽ {{ torneo.partidos|length }} partidos</span>
+                    <span>✅ {{ torneo.partidos.values()|selectattr('jugado')|list|length }} jugados</span>
+                </div>
+                <div class="torneo-actions">
+                    <a href="/torneo/{{ id }}" class="btn btn-secondary">Administrar</a>
+                    <button class="btn-small btn-view" onclick="verProximosPartidos('{{ id }}')">📅 Ver Próximos</button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="no-torneos">No hay torneos creados aún. ¡Crea el primero!</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para editar información del campeonato -->
+<div id="modalEditarInfo" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <h3 style="color: var(--primary);"><i class="fas fa-edit"></i> Editar Información del Campeonato</h3>
+        <form id="formEditarInfo">
+            <div class="form-group">
+                <label>Título del Campeonato</label>
+                <input type="text" id="infoTitulo" class="form-control" placeholder="Ej: Campeonato Futsal Femenino Puriscal 2026">
+            </div>
+            <div class="form-group">
+                <label>Subtítulo / Categoría</label>
+                <input type="text" id="infoSubtitulo" class="form-control" placeholder="Ej: TORNEO DE FUTSAL FEMENINO - TERCERA DIVISIÓN">
+            </div>
+            <div class="form-group">
+                <label>Formato de Competencia</label>
+                <textarea id="infoFormato" rows="5" class="form-control" placeholder="Describe el formato del torneo..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Fechas Importantes</label>
+                <textarea id="infoFechas" rows="3" class="form-control" placeholder="Ej: Inicio: 14 de junio&#10;Jornadas: Miércoles, Sábados y Domingos"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Reglas Adicionales</label>
+                <textarea id="infoReglas" rows="4" class="form-control" placeholder="Reglas específicas del torneo..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Contacto / Información de pago</label>
+                <textarea id="infoContacto" rows="3" class="form-control" placeholder="Información de contacto, costos, etc."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalEditarInfo()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">💾 Guardar Información</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 2rem;
+}
+
+.create-torneo-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.create-torneo-card h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    font-family: 'Inter', sans-serif;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+}
+
+.proximos-partidos-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.proximos-partidos-card h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+.proximos-partidos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.proximo-partido-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--primary);
+}
+
+.proximo-partido-fecha {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.proximo-partido-equipos {
+    font-weight: 500;
+}
+
+.torneos-section {
+    padding: 0 2rem 2rem 2rem;
+}
+
+.torneos-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: white;
+}
+
+.torneos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.torneo-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.torneo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.torneo-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    color: var(--primary);
+}
+
+.torneo-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.torneo-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-view {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-view:hover {
+    background: var(--primary-dark);
+}
+
+.info-mensaje {
+    text-align: center;
+    color: var(--gray-500);
+    padding: 2rem;
+}
+
+.no-torneos {
+    text-align: center;
+    color: var(--gray-500);
+    padding: 2rem;
+}
+
+/* ==================== ESTILOS PARA SECCIÓN DE INFORMACIÓN ==================== */
+.campeonato-info-section {
+    background: white;
+    border-radius: 1rem;
+    margin: 1.5rem 2rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.campeonato-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary);
+}
+
+.campeonato-header h2 {
+    font-size: 1.5rem;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.btn-edit-info {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.btn-edit-info:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.campeonato-content {
+    line-height: 1.6;
+}
+
+.info-titulo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.info-subtitulo {
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+.info-card {
+    background: var(--gray-50);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--primary);
+}
+
+.info-card h4 {
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-card p {
+    margin: 0;
+    color: var(--gray-700);
+    white-space: pre-wrap;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.info-loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+}
+
+.info-vacio {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    border-radius: 0.75rem;
+}
+
+.info-vacio i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--gray-400);
+}
+
+/* Estilos para el modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--primary-dark);
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+}
+
+textarea.form-control {
+    resize: vertical;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: var(--gray-200);
+    color: var(--gray-700);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        margin: 1rem;
+    }
+    .torneos-section {
+        padding: 0 1rem 1rem 1rem;
+    }
+    .campeonato-info-section {
+        margin: 1rem;
+    }
+    .campeonato-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .info-titulo {
+        font-size: 1.3rem;
+    }
+}
+</style>
+
+<script>
+// ==================== FUNCIONES EXISTENTES ====================
+async function verProximosPartidos(torneoId) {
+    const response = await fetch(`/api/torneo/${torneoId}/fixture`);
+    const data = await response.json();
+    
+    const container = document.getElementById('proximosPartidos');
+    const pendientes = data.pendientes || [];
+    
+    if (pendientes.length === 0) {
+        container.innerHTML = '<p class="info-mensaje">No hay partidos programados o el torneo ya finalizó</p>';
+        return;
+    }
+    
+    pendientes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    const proximos = pendientes.slice(0, 5);
+    
+    container.innerHTML = `
+        <div class="proximos-partidos-list">
+            ${proximos.map(p => `
+                <div class="proximo-partido-item">
+                    <div>
+                        <div class="proximo-partido-equipos">
+                            <strong>${escapeHtml(p.nombre_local)}</strong> vs <strong>${escapeHtml(p.nombre_visitante)}</strong>
+                        </div>
+                        <div class="proximo-partido-fecha">
+                            📅 ${p.fecha || 'Por definir'} - ⏰ ${p.hora || 'Por definir'}
+                        </div>
+                    </div>
+                    <a href="/torneo/${torneoId}" class="btn-small">Ir al Torneo</a>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+document.getElementById('crearTorneoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById('nombreTorneo').value;
+    
+    const response = await fetch('/crear_torneo', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nombre: nombre})
+    });
+    
+    if (response.ok) {
+        const data = await response.json();
+        window.location.href = `/torneo/${data.id}`;
+    } else {
+        alert('Error al crear el torneo');
+    }
+});
+
+// ==================== GESTIÓN DE INFORMACIÓN DEL CAMPEONATO ====================
+
+// Cargar información guardada al cargar la página
+function cargarInfoCampeonato() {
+    const infoGuardada = localStorage.getItem('campeonatoInfo');
+    const container = document.getElementById('campeonatoInfoContent');
+    
+    if (infoGuardada) {
+        const info = JSON.parse(infoGuardada);
+        mostrarInfoCampeonato(info);
+    } else {
+        // Mostrar información por defecto
+        mostrarInfoPorDefecto();
+    }
+}
+
+function mostrarInfoCampeonato(info) {
+    const container = document.getElementById('campeonatoInfoContent');
+    
+    let html = `
+        <div class="info-titulo">${escapeHtml(info.titulo || 'Campeonato de Fútbol')}</div>
+        <div class="info-subtitulo">${escapeHtml(info.subtitulo || 'Torneo Femenino')}</div>
+        
+        <div class="info-grid">
+    `;
+    
+    if (info.formato) {
+        html += `
+            <div class="info-card">
+                <h4><i class="fas fa-sitemap"></i> Formato de Competencia</h4>
+                <p>${escapeHtml(info.formato).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    if (info.fechas) {
+        html += `
+            <div class="info-card">
+                <h4><i class="fas fa-calendar-alt"></i> Fechas Importantes</h4>
+                <p>${escapeHtml(info.fechas).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    if (info.reglas) {
+        html += `
+            <div class="info-card">
+                <h4><i class="fas fa-gavel"></i> Reglas del Torneo</h4>
+                <p>${escapeHtml(info.reglas).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    if (info.contacto) {
+        html += `
+            <div class="info-card">
+                <h4><i class="fas fa-phone-alt"></i> Contacto / Información de Pago</h4>
+                <p>${escapeHtml(info.contacto).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+function mostrarInfoPorDefecto() {
+    const container = document.getElementById('campeonatoInfoContent');
+    container.innerHTML = `
+        <div class="info-vacio">
+            <i class="fas fa-info-circle"></i>
+            <p>No hay información configurada aún.</p>
+            <p>Haz clic en "Editar Información" para agregar las reglas, formato y fechas del campeonato.</p>
+        </div>
+    `;
+}
+
+function mostrarModalEditarInfo() {
+    const infoGuardada = localStorage.getItem('campeonatoInfo');
+    if (infoGuardada) {
+        const info = JSON.parse(infoGuardada);
+        document.getElementById('infoTitulo').value = info.titulo || '';
+        document.getElementById('infoSubtitulo').value = info.subtitulo || '';
+        document.getElementById('infoFormato').value = info.formato || '';
+        document.getElementById('infoFechas').value = info.fechas || '';
+        document.getElementById('infoReglas').value = info.reglas || '';
+        document.getElementById('infoContacto').value = info.contacto || '';
+    } else {
+        // Valores por defecto
+        document.getElementById('infoTitulo').value = 'Campeonato Futsal Femenino Puriscal 2026';
+        document.getElementById('infoSubtitulo').value = 'TORNEO DE FUTSAL FEMENINO - TERCERA DIVISIÓN';
+        document.getElementById('infoFormato').value = 'Primera Fase: Sistema de liga (todos contra todos partidos ida y vuelta). Clasifican a la siguiente fase los cuatro equipos que acumulen más puntos. Se jugarán 1° VS 4° y 2° VS 3° en partidos ida y vuelta. Los ganadores se enfrentarían en la final.\n\nFase Final: Eliminación directa a un solo partido. En caso de empate al final del tiempo reglamentario, se definirá mediante tiros desde el punto penal.';
+        document.getElementById('infoFechas').value = 'Inicio: 14 de junio\nJornadas: Miércoles, Sábados y Domingos\nHorario: 10:00 am a 8:00 pm';
+        document.getElementById('infoReglas').value = '• El equipo casa asume costos de cancha y arbitraje\n• Los pagos se realizan mediante SINPE al número 60537767\n• Fecha límite para programar: miércoles a las 4:00 pm\n• Si no se cancela en el tiempo establecido, el equipo casa pierde los puntos';
+        document.getElementById('infoContacto').value = '📞 SINPE: 60537767\n📧 Correo: torneos@ccrdpuriscal.com\n📱 WhatsApp: +506 8888 1234';
+    }
+    document.getElementById('modalEditarInfo').style.display = 'flex';
+}
+
+function cerrarModalEditarInfo() {
+    document.getElementById('modalEditarInfo').style.display = 'none';
+}
+
+document.getElementById('formEditarInfo')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const info = {
+        titulo: document.getElementById('infoTitulo').value,
+        subtitulo: document.getElementById('infoSubtitulo').value,
+        formato: document.getElementById('infoFormato').value,
+        fechas: document.getElementById('infoFechas').value,
+        reglas: document.getElementById('infoReglas').value,
+        contacto: document.getElementById('infoContacto').value,
+        ultimaActualizacion: new Date().toLocaleString()
+    };
+    
+    localStorage.setItem('campeonatoInfo', JSON.stringify(info));
+    mostrarInfoCampeonato(info);
+    cerrarModalEditarInfo();
+    alert('✅ Información del campeonato guardada correctamente');
+});
+
+// Cerrar modal al hacer clic fuera de él
+window.onclick = function(event) {
+    const modal = document.getElementById('modalEditarInfo');
+    if (event.target === modal) {
+        cerrarModalEditarInfo();
+    }
+};
+
+// Cargar información al iniciar la página
+document.addEventListener('DOMContentLoaded', cargarInfoCampeonato);
+</script>
+{% endblock %}

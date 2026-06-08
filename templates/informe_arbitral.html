@@ -1,0 +1,466 @@
+<!-- templates/informe_arbitral.html -->
+{% extends "base.html" %}
+
+{% block title %}Informe Arbitral - {{ partido.nombre_local }} vs {{ partido.nombre_visitante }}{% endblock %}
+
+{% block content %}
+<div class="informe-container">
+    <div class="informe-header">
+        <h1>📋 Hoja de Incidencias</h1>
+        <h2>{{ torneo.nombre }}</h2>
+        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+            <button onclick="window.print()" class="btn btn-primary">🖨️ Imprimir</button>
+            <button onclick="guardarInforme()" class="btn btn-success">💾 Guardar Informe</button>
+        </div>
+    </div>
+
+    <form id="informeForm" class="informe-form">
+        <!-- Información básica -->
+        <div class="form-section">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>FECHA:</label>
+                    <input type="date" id="fecha" name="fecha" value="{{ informe.fecha or partido.fecha or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>HORA:</label>
+                    <input type="time" id="hora" name="hora" value="{{ informe.hora or partido.hora or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>LUGAR:</label>
+                    <input type="text" id="lugar" name="lugar" value="{{ informe.lugar or partido.cancha or '' }}" placeholder="Cancha / Estadio">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>ÁRBITRO 1:</label>
+                    <input type="text" id="arbitro1" name="arbitro1" value="{{ informe.arbitro1 or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>ÁRBITRO 2:</label>
+                    <input type="text" id="arbitro2" name="arbitro2" value="{{ informe.arbitro2 or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>ÁRBITRO 3:</label>
+                    <input type="text" id="arbitro3" name="arbitro3" value="{{ informe.arbitro3 or '' }}">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>TK:</label>
+                    <input type="text" id="tk" name="tk" value="{{ informe.tk or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>JORNADA:</label>
+                    <input type="text" id="jornada" name="jornada" value="{{ informe.jornada or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>CATEGORIA:</label>
+                    <input type="text" id="categoria" name="categoria" value="{{ informe.categoria or torneo.categoria or '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipos -->
+        <div class="form-section">
+            <div class="equipos-row">
+                <div class="equipo-card">
+                    <h3>EQUIPO LOCAL: {{ partido.nombre_local }}</h3>
+                    <div class="form-group">
+                        <label>COLOR:</label>
+                        <input type="text" id="color_local" name="color_local" value="{{ informe.color_local or '' }}" placeholder="Color de camiseta">
+                    </div>
+                </div>
+                <div class="equipo-card">
+                    <h3>EQUIPO VISITA: {{ partido.nombre_visitante }}</h3>
+                    <div class="form-group">
+                        <label>COLOR:</label>
+                        <input type="text" id="color_visitante" name="color_visitante" value="{{ informe.color_visitante or '' }}" placeholder="Color de camiseta">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>MARCADOR A FAVOR:</label>
+                <input type="text" id="marcador_favor" name="marcador_favor" value="{{ informe.marcador_favor or '' }}" placeholder="Ej: CCDR PURISCAL">
+            </div>
+        </div>
+
+        <!-- Goles por tiempo -->
+        <div class="form-section">
+            <h3>⚽ GOLES</h3>
+            <div class="goles-table">
+                <table class="tabla-goles">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>1T</th>
+                            <th>2T</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>{{ partido.nombre_local }}</strong></td>
+                            <td><input type="number" id="goles_local_1t" value="{{ informe.goles_local_1t or 0 }}" style="width: 60px;"></td>
+                            <td><input type="number" id="goles_local_2t" value="{{ informe.goles_local_2t or 0 }}" style="width: 60px;"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>{{ partido.nombre_visitante }}</strong></td>
+                            <td><input type="number" id="goles_visitante_1t" value="{{ informe.goles_visitante_1t or 0 }}" style="width: 60px;"></td>
+                            <td><input type="number" id="goles_visitante_2t" value="{{ informe.goles_visitante_2t or 0 }}" style="width: 60px;"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Faltas por tiempo -->
+        <div class="form-section">
+            <h3>🟨 FALTAS</h3>
+            <div class="faltas-table">
+                <table class="tabla-faltas">
+                    <thead>
+                        <tr><th></th><th>1T</th><th>2T</th><th>TOTAL</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>{{ partido.nombre_local }}</strong></td>
+                            <td><input type="number" id="faltas_local_1t" value="{{ informe.faltas_local_1t or 0 }}" style="width: 60px;"></td>
+                            <td><input type="number" id="faltas_local_2t" value="{{ informe.faltas_local_2t or 0 }}" style="width: 60px;"></td>
+                            <td><span id="total_faltas_local">0</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>{{ partido.nombre_visitante }}</strong></td>
+                            <td><input type="number" id="faltas_visitante_1t" value="{{ informe.faltas_visitante_1t or 0 }}" style="width: 60px;"></td>
+                            <td><input type="number" id="faltas_visitante_2t" value="{{ informe.faltas_visitante_2t or 0 }}" style="width: 60px;"></td>
+                            <td><span id="total_faltas_visitante">0</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Saques de esquina -->
+        <div class="form-section">
+            <h3>🚩 SAQUES DE ESQUINA</h3>
+            <div class="saques-table">
+                <table>
+                    <thead><tr><th></th><th>1T</th><th>2T</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>{{ partido.nombre_local }}</strong></td>
+                            <td><input type="number" id="saque_local_1t" value="{{ informe.saque_local_1t or 0 }}" style="width: 60px;"></td>
+                            <td><input type="number" id="saque_local_2t" value="{{ informe.saque_local_2t or 0 }}" style="width: 60px;"></td>
+                        </tr>
+                        <tr><td><strong>{{ partido.nombre_visitante }}</strong></td>
+                            <td><input type="number" id="saque_visitante_1t" value="{{ informe.saque_visitante_1t or 0 }}" style="width: 60px;"></td>
+                            <td><input type="number" id="saque_visitante_2t" value="{{ informe.saque_visitante_2t or 0 }}" style="width: 60px;"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Amonestados -->
+        <div class="form-section">
+            <h3>🟨 AMONESTADOS</h3>
+            <div class="amonestados-grid">
+                <div class="amonestados-col">
+                    <h4>{{ partido.nombre_local }}</h4>
+                    <div id="amonestados_local_list">
+                        {% for a in informe.amonestados_local %}
+                        <div class="amonestado-item">
+                            <input type="text" value="{{ a }}" placeholder="Nombre del jugador">
+                            <button type="button" onclick="eliminarAmonestado('local', this)">❌</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn-small" onclick="agregarAmonestado('local')">+ Agregar</button>
+                </div>
+                <div class="amonestados-col">
+                    <h4>{{ partido.nombre_visitante }}</h4>
+                    <div id="amonestados_visitante_list">
+                        {% for a in informe.amonestados_visitante %}
+                        <div class="amonestado-item">
+                            <input type="text" value="{{ a }}" placeholder="Nombre del jugador">
+                            <button type="button" onclick="eliminarAmonestado('visitante', this)">❌</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn-small" onclick="agregarAmonestado('visitante')">+ Agregar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expulsados -->
+        <div class="form-section">
+            <h3>🟥 EXPULSADOS</h3>
+            <div class="expulsados-grid">
+                <div class="expulsados-col">
+                    <h4>{{ partido.nombre_local }}</h4>
+                    <div id="expulsados_local_list">
+                        {% for e in informe.expulsados_local %}
+                        <div class="expulsado-item">
+                            <input type="text" value="{{ e }}" placeholder="Nombre del jugador">
+                            <button type="button" onclick="eliminarExpulsado('local', this)">❌</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn-small" onclick="agregarExpulsado('local')">+ Agregar</button>
+                </div>
+                <div class="expulsados-col">
+                    <h4>{{ partido.nombre_visitante }}</h4>
+                    <div id="expulsados_visitante_list">
+                        {% for e in informe.expulsados_visitante %}
+                        <div class="expulsado-item">
+                            <input type="text" value="{{ e }}" placeholder="Nombre del jugador">
+                            <button type="button" onclick="eliminarExpulsado('visitante', this)">❌</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn-small" onclick="agregarExpulsado('visitante')">+ Agregar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div class="form-section">
+            <h3>📝 OBSERVACIONES</h3>
+            <textarea id="observaciones" rows="4" placeholder="Observaciones del partido...">{{ informe.observaciones or '' }}</textarea>
+        </div>
+    </form>
+</div>
+
+<style>
+.informe-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.informe-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.informe-form {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: var(--shadow);
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.form-section h3 {
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.equipos-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.equipo-card {
+    background: var(--gray-50);
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
+.equipo-card h3 {
+    margin-bottom: 0.5rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table td, table th {
+    padding: 0.5rem;
+    text-align: center;
+    border: 1px solid var(--gray-200);
+}
+
+table th {
+    background: var(--gray-100);
+}
+
+.amonestados-grid, .expulsados-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.amonestado-item, .expulsado-item {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.amonestado-item input, .expulsado-item input {
+    flex: 1;
+}
+
+textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.5rem;
+    resize: vertical;
+}
+
+@media print {
+    .informe-header button, .btn, .btn-small {
+        display: none;
+    }
+    
+    .informe-container {
+        padding: 0;
+    }
+    
+    .informe-form {
+        box-shadow: none;
+        padding: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .equipos-row, .amonestados-grid, .expulsados-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+const torneoId = '{{ torneo_id }}';
+const partidoId = {{ partido.id }};
+
+function calcularTotales() {
+    // Calcular total de faltas
+    const faltasLocal1t = parseInt(document.getElementById('faltas_local_1t').value) || 0;
+    const faltasLocal2t = parseInt(document.getElementById('faltas_local_2t').value) || 0;
+    const faltasVisitante1t = parseInt(document.getElementById('faltas_visitante_1t').value) || 0;
+    const faltasVisitante2t = parseInt(document.getElementById('faltas_visitante_2t').value) || 0;
+    
+    document.getElementById('total_faltas_local').textContent = faltasLocal1t + faltasLocal2t;
+    document.getElementById('total_faltas_visitante').textContent = faltasVisitante1t + faltasVisitante2t;
+}
+
+function agregarAmonestado(equipo) {
+    const container = document.getElementById(`amonestados_${equipo}_list`);
+    const div = document.createElement('div');
+    div.className = 'amonestado-item';
+    div.innerHTML = `
+        <input type="text" placeholder="Nombre del jugador">
+        <button type="button" onclick="eliminarAmonestado('${equipo}', this)">❌</button>
+    `;
+    container.appendChild(div);
+}
+
+function eliminarAmonestado(equipo, btn) {
+    btn.parentElement.remove();
+}
+
+function agregarExpulsado(equipo) {
+    const container = document.getElementById(`expulsados_${equipo}_list`);
+    const div = document.createElement('div');
+    div.className = 'expulsado-item';
+    div.innerHTML = `
+        <input type="text" placeholder="Nombre del jugador">
+        <button type="button" onclick="eliminarExpulsado('${equipo}', this)">❌</button>
+    `;
+    container.appendChild(div);
+}
+
+function eliminarExpulsado(equipo, btn) {
+    btn.parentElement.remove();
+}
+
+async function guardarInforme() {
+    // Recolectar datos del formulario
+    const datos = {
+        fecha: document.getElementById('fecha').value,
+        hora: document.getElementById('hora').value,
+        lugar: document.getElementById('lugar').value,
+        arbitro1: document.getElementById('arbitro1').value,
+        arbitro2: document.getElementById('arbitro2').value,
+        arbitro3: document.getElementById('arbitro3').value,
+        tk: document.getElementById('tk').value,
+        jornada: document.getElementById('jornada').value,
+        categoria: document.getElementById('categoria').value,
+        marcador_favor: document.getElementById('marcador_favor').value,
+        color_local: document.getElementById('color_local').value,
+        color_visitante: document.getElementById('color_visitante').value,
+        goles_local_1t: parseInt(document.getElementById('goles_local_1t').value) || 0,
+        goles_local_2t: parseInt(document.getElementById('goles_local_2t').value) || 0,
+        goles_visitante_1t: parseInt(document.getElementById('goles_visitante_1t').value) || 0,
+        goles_visitante_2t: parseInt(document.getElementById('goles_visitante_2t').value) || 0,
+        faltas_local_1t: parseInt(document.getElementById('faltas_local_1t').value) || 0,
+        faltas_local_2t: parseInt(document.getElementById('faltas_local_2t').value) || 0,
+        faltas_visitante_1t: parseInt(document.getElementById('faltas_visitante_1t').value) || 0,
+        faltas_visitante_2t: parseInt(document.getElementById('faltas_visitante_2t').value) || 0,
+        saque_local_1t: parseInt(document.getElementById('saque_local_1t').value) || 0,
+        saque_local_2t: parseInt(document.getElementById('saque_local_2t').value) || 0,
+        saque_visitante_1t: parseInt(document.getElementById('saque_visitante_1t').value) || 0,
+        saque_visitante_2t: parseInt(document.getElementById('saque_visitante_2t').value) || 0,
+        amonestados_local: [],
+        amonestados_visitante: [],
+        expulsados_local: [],
+        expulsados_visitante: [],
+        observaciones: document.getElementById('observaciones').value
+    };
+    
+    // Recolectar amonestados
+    document.querySelectorAll('#amonestados_local_list input').forEach(input => {
+        if (input.value.trim()) datos.amonestados_local.push(input.value.trim());
+    });
+    document.querySelectorAll('#amonestados_visitante_list input').forEach(input => {
+        if (input.value.trim()) datos.amonestados_visitante.push(input.value.trim());
+    });
+    
+    // Recolectar expulsados
+    document.querySelectorAll('#expulsados_local_list input').forEach(input => {
+        if (input.value.trim()) datos.expulsados_local.push(input.value.trim());
+    });
+    document.querySelectorAll('#expulsados_visitante_list input').forEach(input => {
+        if (input.value.trim()) datos.expulsados_visitante.push(input.value.trim());
+    });
+    
+    const response = await fetch(`/api/torneo/${torneoId}/partido/${partidoId}/informe_arbitral`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(datos)
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+        alert('✅ Informe arbitral guardado correctamente');
+    } else {
+        alert('❌ Error al guardar el informe');
+    }
+}
+
+// Event listeners para calcular totales
+document.getElementById('faltas_local_1t').addEventListener('input', calcularTotales);
+document.getElementById('faltas_local_2t').addEventListener('input', calcularTotales);
+document.getElementById('faltas_visitante_1t').addEventListener('input', calcularTotales);
+document.getElementById('faltas_visitante_2t').addEventListener('input', calcularTotales);
+
+calcularTotales();
+</script>
+{% endblock %}
