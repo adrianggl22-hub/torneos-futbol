@@ -766,26 +766,30 @@
         jugadoresVisitante = await responseVisitante.json();
         const datalistLocal = document.getElementById('jugadoresLocalList');
         const datalistVisitante = document.getElementById('jugadoresVisitanteList');
-        datalistLocal.innerHTML = '';
-        datalistVisitante.innerHTML = '';
+        if (datalistLocal) datalistLocal.innerHTML = '';
+        if (datalistVisitante) datalistVisitante.innerHTML = '';
         jugadoresLocal.forEach(j => {
-            const option = document.createElement('option');
-            option.value = j.nombre;
-            datalistLocal.appendChild(option);
-            if (j.nombre_abreviado) {
-                const optionAbr = document.createElement('option');
-                optionAbr.value = j.nombre_abreviado;
-                datalistLocal.appendChild(optionAbr);
+            if (datalistLocal) {
+                const option = document.createElement('option');
+                option.value = j.nombre;
+                datalistLocal.appendChild(option);
+                if (j.nombre_abreviado) {
+                    const optionAbr = document.createElement('option');
+                    optionAbr.value = j.nombre_abreviado;
+                    datalistLocal.appendChild(optionAbr);
+                }
             }
         });
         jugadoresVisitante.forEach(j => {
-            const option = document.createElement('option');
-            option.value = j.nombre;
-            datalistVisitante.appendChild(option);
-            if (j.nombre_abreviado) {
-                const optionAbr = document.createElement('option');
-                optionAbr.value = j.nombre_abreviado;
-                datalistVisitante.appendChild(optionAbr);
+            if (datalistVisitante) {
+                const option = document.createElement('option');
+                option.value = j.nombre;
+                datalistVisitante.appendChild(option);
+                if (j.nombre_abreviado) {
+                    const optionAbr = document.createElement('option');
+                    optionAbr.value = j.nombre_abreviado;
+                    datalistVisitante.appendChild(optionAbr);
+                }
             }
         });
     }
@@ -829,7 +833,7 @@
         window.open(`/imprimir_plantilla/${torneoId}/${equipoId}`, '_blank');
     }
 
-    // ==================== EQUIPOS (CORREGIDO - CIERRA MODAL AUTOMÁTICAMENTE) ====================
+    // ==================== EQUIPOS ====================
     document.getElementById('formAgregarEquipo')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -887,67 +891,141 @@
             }).then(() => location.reload()); 
     }
 
-    // ==================== JUGADORES ====================
+    // ==================== JUGADORES - VERSIÓN CORREGIDA ====================
     document.getElementById('equipoJugadoresSelect')?.addEventListener('change', function() { 
         equipoSeleccionadoJugadores = this.value; 
         cargarJugadores(); 
     });
-    
+
     async function cargarJugadores() {
         if (!equipoSeleccionadoJugadores) { 
             document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">Selecciona un equipo</p>'; 
             return; 
         }
-        const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`);
-        const jugadores = await response.json();
-        if (jugadores.length === 0) { 
-            document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">No hay jugadores registrados</p>'; 
-            return; 
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`);
+            const jugadores = await response.json();
+            if (jugadores.length === 0) { 
+                document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">No hay jugadores registrados</p>'; 
+                return; 
+            }
+            let html = `<div class="table-container"><table><thead><tr><th style="text-align:center">#</th><th>Nombre</th><th>Posición</th><th style="text-align:center">⚽ Goles</th><th style="text-align:center">🟨 TA</th><th style="text-align:center">🟥 TR</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+            jugadores.forEach(j => { 
+                html += `<tr>
+                    <td style="text-align:center">${j.numero}</td>
+                    <td><strong>${escapeHtml(j.nombre)}</strong>${j.nombre_abreviado ? `<br><small>${escapeHtml(j.nombre_abreviado)}</small>` : ''}</td>
+                    <td>${escapeHtml(j.posicion)}</td>
+                    <td style="text-align:center;color:var(--primary);font-weight:bold">${j.goles || 0}</td>
+                    <td style="text-align:center;color:#f59e0b">${j.tarjetas_amarillas || 0}</td>
+                    <td style="text-align:center;color:#ef4444">${j.tarjetas_rojas || 0}</td>
+                    <td>${j.documento || '-'}</td>
+                    <td style="text-align:center">
+                        <button class="btn-small btn-info" onclick="editarJugador(${j.id}, '${escapeHtml(j.nombre)}', ${j.numero}, '${escapeHtml(j.posicion)}', '${j.documento || ''}', '${escapeHtml(j.nombre_abreviado || '')}', ${j.goles || 0}, ${j.tarjetas_amarillas || 0}, ${j.tarjetas_rojas || 0})">✏️</button>
+                        <button class="btn-small btn-success" onclick="agregarGolJugador(${j.id}, '${escapeHtml(j.nombre)}')">⚽+1</button>
+                        <button class="btn-small btn-warning" onclick="agregarTarjetaAmarilla(${j.id}, '${escapeHtml(j.nombre)}')">🟨+1</button>
+                        <button class="btn-small btn-danger" onclick="agregarTarjetaRoja(${j.id}, '${escapeHtml(j.nombre)}')">🟥+1</button>
+                        <button class="btn-small btn-danger" onclick="eliminarJugador(${j.id})">🗑️</button>
+                    </td>
+                </tr>`;
+            });
+            html += `</tbody>}</div>`;
+            document.getElementById('jugadoresList').innerHTML = html;
+        } catch (error) {
+            console.error('Error cargando jugadores:', error);
+            document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">Error al cargar jugadores</p>';
         }
-        let html = `<div class="table-container"><table><thead><tr><th style="text-align:center">#</th><th>Nombre</th><th>Posición</th><th style="text-align:center">⚽ Goles</th><th style="text-align:center">🟨 TA</th><th style="text-align:center">🟥 TR</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
-        jugadores.forEach(j => { 
-            html += `<tr>
-                <td style="text-align:center">${j.numero}</td>
-                <td><strong>${escapeHtml(j.nombre)}</strong>${j.nombre_abreviado ? `<br><small>${escapeHtml(j.nombre_abreviado)}</small>` : ''}</td>
-                <td>${escapeHtml(j.posicion)}</td>
-                <td style="text-align:center;color:var(--primary);font-weight:bold">${j.goles || 0}</td>
-                <td style="text-align:center;color:#f59e0b">${j.tarjetas_amarillas || 0}</td>
-                <td style="text-align:center;color:#ef4444">${j.tarjetas_rojas || 0}</td>
-                <td>${j.documento || '-'}</td>
-                <td style="text-align:center">
-                    <button class="btn-small btn-info" onclick="editarJugador(${j.id}, '${escapeHtml(j.nombre)}', ${j.numero}, '${escapeHtml(j.posicion)}', '${j.documento || ''}', '${escapeHtml(j.nombre_abreviado || '')}', ${j.goles || 0}, ${j.tarjetas_amarillas || 0}, ${j.tarjetas_rojas || 0})">✏️</button>
-                    <button class="btn-small btn-success" onclick="agregarGolJugador(${j.id}, '${escapeHtml(j.nombre)}')">⚽+1</button>
-                    <button class="btn-small btn-warning" onclick="agregarTarjetaAmarilla(${j.id}, '${escapeHtml(j.nombre)}')">🟨+1</button>
-                    <button class="btn-small btn-danger" onclick="agregarTarjetaRoja(${j.id}, '${escapeHtml(j.nombre)}')">🟥+1</button>
-                    <button class="btn-small btn-danger" onclick="eliminarJugador(${j.id})">🗑️</button>
-                </td>
-            </tr>`;
-        });
-        html += `</tbody></table></div>`;
-        document.getElementById('jugadoresList').innerHTML = html;
     }
-    
+
     document.getElementById('formAgregarJugador')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const response = await fetch(`/api/torneo/${torneoId}/equipo/${document.getElementById('jugadorEquipoId').value}/jugadores`, {
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                nombre: document.getElementById('jugadorNombre').value, 
-                nombre_abreviado: document.getElementById('jugadorNombreAbreviado').value,
-                numero: parseInt(document.getElementById('jugadorNumero').value), 
-                posicion: document.getElementById('jugadorPosicion').value, 
-                documento: document.getElementById('jugadorDocumento').value
-            })
-        });
-        const data = await response.json();
-        if (data.success) { 
-            cerrarModal('modalJugador'); 
-            document.getElementById('formAgregarJugador').reset();
-            if (equipoSeleccionadoJugadores) cargarJugadores(); 
-        } else alert(data.error);
+        
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '⏳ Guardando...';
+        submitBtn.disabled = true;
+        
+        const equipoId = document.getElementById('jugadorEquipoId').value;
+        const nombre = document.getElementById('jugadorNombre').value.trim();
+        const numero = parseInt(document.getElementById('jugadorNumero').value);
+        const posicion = document.getElementById('jugadorPosicion').value.trim();
+        const nombreAbreviado = document.getElementById('jugadorNombreAbreviado').value.trim();
+        const documento = document.getElementById('jugadorDocumento').value.trim();
+        
+        // Validaciones
+        if (!nombre) {
+            alert('❌ El nombre del jugador es requerido');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        if (!numero || isNaN(numero)) {
+            alert('❌ El número de camiseta es requerido');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        if (!posicion) {
+            alert('❌ La posición es requerida');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoId}/jugadores`, {
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    nombre: nombre,
+                    nombre_abreviado: nombreAbreviado || '',
+                    numero: numero,
+                    posicion: posicion,
+                    documento: documento || '',
+                    fecha_nacimiento: '',
+                    telefono: '',
+                    email: '',
+                    altura: null,
+                    peso: null,
+                    pierna_habil: ''
+                })
+            });
+            
+            const data = await response.json();
+            console.log('Respuesta del servidor:', data); // Para depuración
+            
+            if (data.success) {
+                alert('✅ Jugador agregado correctamente');
+                cerrarModal('modalJugador');
+                document.getElementById('formAgregarJugador').reset();
+                
+                // Recargar la lista de jugadores
+                if (equipoSeleccionadoJugadores && equipoSeleccionadoJugadores == equipoId) {
+                    await cargarJugadores();
+                } else {
+                    equipoSeleccionadoJugadores = equipoId;
+                    document.getElementById('equipoJugadoresSelect').value = equipoId;
+                    await cargarJugadores();
+                }
+            } else {
+                alert('❌ Error: ' + (data.error || 'No se pudo agregar el jugador. El número de camiseta podría estar repetido.'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ Error de conexión. Verifica tu conexión a internet. El jugador podría haberse guardado, revisa la lista.');
+            // Intentamos recargar la lista por si acaso se guardó
+            if (equipoId) {
+                equipoSeleccionadoJugadores = equipoId;
+                document.getElementById('equipoJugadoresSelect').value = equipoId;
+                await cargarJugadores();
+            }
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
     });
-    
+
     function eliminarJugador(jugadorId) { 
         if (confirm('¿Eliminar jugador?')) 
             fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`, {
@@ -1150,7 +1228,7 @@
             }).then(() => cargarCuerpoTecnico()); 
     }
 
-    // ==================== FIXTURE - VERSIÓN CORREGIDA CON SEPARACIÓN DE COLUMNAS ====================
+    // ==================== FIXTURE ====================
     async function generarFixture() { 
         if (!confirm('⚠️ ¿Generar nuevo fixture?')) return;
         const btn = event.target;
@@ -1189,46 +1267,12 @@
             document.getElementById('fixtureList').innerHTML = '<p class="info-mensaje">No hay partidos programados</p>'; 
             return; 
         }
-        // Tabla con clase específica para mejor visualización
-        let html = `<div class="table-container fixture-container">`;
-        html += `<table class="fixture-table" style="width: 100%; border-collapse: collapse; min-width: 700px;">`;
-        html += `<thead>`;
-        html += `<tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;">`;
-        html += `<th style="padding: 12px 15px; text-align: left; border-right: 2px solid rgba(255,255,255,0.3);">🏠 LOCAL</th>`;
-        html += `<th style="padding: 12px 15px; text-align: left; border-right: 2px solid rgba(255,255,255,0.3);">✈️ VISITANTE</th>`;
-        html += `<th style="padding: 12px 15px; text-align: center;">📅 FECHA</th>`;
-        html += `<th style="padding: 12px 15px; text-align: center;">⏰ HORA</th>`;
-        html += `<th style="padding: 12px 15px; text-align: left;">🏟️ CANCHA</th>`;
-        html += `<th style="padding: 12px 15px; text-align: center;">⚡ ACCIONES</th>`;
-        html += `</tr></thead><tbody>`;
-        
+        let html = `<div class="table-container fixture-container"><table class="fixture-table" style="width: 100%; border-collapse: collapse; min-width: 700px;"><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="padding: 12px 15px; text-align: left; border-right: 2px solid rgba(255,255,255,0.3);">🏠 LOCAL</th><th style="padding: 12px 15px; text-align: left; border-right: 2px solid rgba(255,255,255,0.3);">✈️ VISITANTE</th><th style="padding: 12px 15px; text-align: center;">📅 FECHA</th><th style="padding: 12px 15px; text-align: center;">⏰ HORA</th><th style="padding: 12px 15px; text-align: left;">🏟️ CANCHA</th><th style="padding: 12px 15px; text-align: center;">⚡ ACCIONES</th></tr></thead><tbody>`;
         pendientes.forEach(p => {
-            html += `<tr style="border-bottom: 1px solid #e5e7eb;">`;
-            html += `<td style="padding: 12px 15px; font-weight: bold; border-right: 1px solid #e5e7eb;">${escapeHtml(p.nombre_local)}</td>`;
-            html += `<td style="padding: 12px 15px; font-weight: bold; border-right: 1px solid #e5e7eb;">${escapeHtml(p.nombre_visitante)}</td>`;
-            html += `<td style="padding: 12px 15px; text-align: center;">${p.fecha || 'Por definir'}</td>`;
-            html += `<td style="padding: 12px 15px; text-align: center;">${p.hora || 'Por definir'}</td>`;
-            html += `<td style="padding: 12px 15px;">${p.cancha || 'Por definir'}</td>`;
-            html += `<td style="padding: 12px 15px; text-align: center; white-space: nowrap;">
-                        <button class="btn-small btn-warning" onclick="mostrarModalEditarPartido(${p.id}, '${p.fecha || ''}', '${p.hora || ''}', '${p.cancha || ''}')" style="margin: 2px;">✏️</button>
-                        <button class="btn-small btn-success" onclick="mostrarModalResultado(${p.id}, '${escapeHtml(p.nombre_local)}', '${escapeHtml(p.nombre_visitante)}', ${p.id_local}, ${p.id_visitante})" style="margin: 2px;">📝</button>
-                    </td>`;
-            html += `</tr>`;
+            html += `<tr style="border-bottom: 1px solid #e5e7eb;"><td style="padding: 12px 15px; font-weight: bold; border-right: 1px solid #e5e7eb;">${escapeHtml(p.nombre_local)}</td><td style="padding: 12px 15px; font-weight: bold; border-right: 1px solid #e5e7eb;">${escapeHtml(p.nombre_visitante)}</td><td style="padding: 12px 15px; text-align: center;">${p.fecha || 'Por definir'}</td><td style="padding: 12px 15px; text-align: center;">${p.hora || 'Por definir'}</td><td style="padding: 12px 15px;">${p.cancha || 'Por definir'}</td><td style="padding: 12px 15px; text-align: center; white-space: nowrap;"><button class="btn-small btn-warning" onclick="mostrarModalEditarPartido(${p.id}, '${p.fecha || ''}', '${p.hora || ''}', '${p.cancha || ''}')" style="margin: 2px;">✏️</button><button class="btn-small btn-success" onclick="mostrarModalResultado(${p.id}, '${escapeHtml(p.nombre_local)}', '${escapeHtml(p.nombre_visitante)}', ${p.id_local}, ${p.id_visitante})" style="margin: 2px;">📝</button></td></tr>`;
         });
         html += `</tbody></table></div>`;
-        
-        // Agregar CSS adicional para asegurar separación
-        const styleFix = document.createElement('style');
-        styleFix.textContent = `
-            .fixture-table td:first-child, .fixture-table th:first-child {
-                border-right: 2px solid #e5e7eb;
-            }
-            .fixture-table td:nth-child(2), .fixture-table th:nth-child(2) {
-                border-right: 2px solid #e5e7eb;
-            }
-        `;
         document.getElementById('fixtureList').innerHTML = html;
-        document.head.appendChild(styleFix);
     }
 
     // ==================== EDITAR PARTIDO ====================
@@ -1301,7 +1345,7 @@
             document.getElementById('resultadosList').innerHTML = '<p class="info-mensaje">No hay partidos jugados</p>'; 
             return; 
         }
-        let html = `<div class="table-container"><table><thead><tr><th>Local</th><th style="text-align:center">Resultado</th><th>Visitante</th><th>Goleadoras</th><th style="text-align:center">Fecha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        let html = `<div class="table-container"><tr><thead><tr><th>Local</th><th style="text-align:center">Resultado</th><th>Visitante</th><th>Goleadoras</th><th style="text-align:center">Fecha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
         for (const p of jugados) {
             let goleadoresHtml = '';
             if (p.goleadores_local?.length) goleadoresHtml += `<div><span style="color:var(--primary);">🏠 ${p.goleadores_local.map(g => g.nombre).join(', ')}</span></div>`;
@@ -1428,7 +1472,6 @@
             return; 
         }
         
-        // Ordenar por fecha
         todos.sort((a, b) => {
             if (a.fecha && b.fecha) return a.fecha.localeCompare(b.fecha);
             if (a.fecha) return -1;
@@ -1509,7 +1552,6 @@
             return;
         }
         
-        // Mostrar clasificados
         document.getElementById('clasificadosPlayoffs').style.display = 'block';
         let html = `<table style="width:100%"><thead><tr><th style="text-align:center">Pos</th><th>Equipo</th><th style="text-align:center">Puntos</th><th>Clasificación</th></tr></thead><tbody>`;
         playoffs.clasificados.forEach(c => {
@@ -1521,10 +1563,9 @@
                 <td>${c.posicion === 1 ? '🏆 Líder' : c.posicion === 2 ? '🥈 Sub-líder' : c.posicion === 3 ? '🥉 Tercero' : '✅ Clasificado'}</td>
             </tr>`;
         });
-        html += `</tbody></tr>`;
+        html += `</tbody>}</div>`;
         document.getElementById('clasificadosPlayoffs').innerHTML = html;
         
-        // Mostrar llaves
         if (playoffs.semifinales) {
             document.getElementById('llavesContainer').style.display = 'flex';
             document.getElementById('llavesContainer').innerHTML = generarLlaves(playoffs);
