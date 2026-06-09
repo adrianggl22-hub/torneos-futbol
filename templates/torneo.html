@@ -238,6 +238,85 @@
         margin-top: 5px;
     }
     
+    /* ==================== ESTILOS ESPECÍFICOS PARA LA TABLA DE JUGADORES ==================== */
+    .jugadores-table-container {
+        overflow-x: auto;
+        margin: 20px 0;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        background: white;
+    }
+    
+    .jugadores-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    
+    .jugadores-table thead tr {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+    }
+    
+    .jugadores-table th,
+    .jugadores-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+    
+    .jugadores-table th {
+        font-weight: 600;
+    }
+    
+    .jugadores-table th:first-child {
+        text-align: center;
+        width: 60px;
+    }
+    
+    .jugadores-table th:nth-child(2),
+    .jugadores-table th:nth-child(3) {
+        text-align: left;
+    }
+    
+    .jugadores-table th:nth-child(4),
+    .jugadores-table th:nth-child(5),
+    .jugadores-table th:nth-child(6) {
+        text-align: center;
+    }
+    
+    .jugadores-table td:first-child {
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .jugadores-table td:nth-child(4),
+    .jugadores-table td:nth-child(5),
+    .jugadores-table td:nth-child(6) {
+        text-align: center;
+    }
+    
+    .jugadores-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+    
+    /* Botones dentro de la tabla */
+    .jugadores-table .btn-small {
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        margin: 2px;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+    
+    .acciones {
+        white-space: nowrap;
+        text-align: center;
+    }
+    
     /* ==================== ESTILOS PARA PLAYOFFS ==================== */
     .bracket {
         display: flex;
@@ -908,53 +987,54 @@
                 throw new Error(`Error HTTP: ${response.status}`);
             }
             const jugadores = await response.json();
+            
             if (jugadores.length === 0) { 
                 document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">No hay jugadores registrados</p>'; 
                 return; 
             }
             
-            // Tabla bien formada con todas las columnas
+            // Tabla con clases CSS específicas
             let html = `
-                <div class="table-container">
-                    <table style="width: 100%; border-collapse: collapse;">
+                <div class="jugadores-table-container">
+                    <table class="jugadores-table">
                         <thead>
-                            <tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;">
-                                <th style="padding: 12px 15px; text-align: center; width: 60px;">#</th>
-                                <th style="padding: 12px 15px; text-align: left;">Nombre</th>
-                                <th style="padding: 12px 15px; text-align: left;">Posición</th>
-                                <th style="padding: 12px 15px; text-align: center; width: 70px;">⚽ Goles</th>
-                                <th style="padding: 12px 15px; text-align: center; width: 70px;">🟨 TA</th>
-                                <th style="padding: 12px 15px; text-align: center; width: 70px;">🟥 TR</th>
-                                <th style="padding: 12px 15px; text-align: left;">Documento</th>
-                                <th style="padding: 12px 15px; text-align: center;">Acciones</th>
+                            <tr>
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Posición</th>
+                                <th>⚽ Goles</th>
+                                <th>🟨 TA</th>
+                                <th>🟥 TR</th>
+                                <th>Documento</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
             `;
             
-            jugadores.forEach(j => { 
+            for (const j of jugadores) {
                 html += `
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 12px 15px; text-align: center; font-weight: bold;">${j.numero}</td>
-                        <td style="padding: 12px 15px; text-align: left;">
+                    <tr>
+                        <td>${j.numero}</td>
+                        <td>
                             <strong>${escapeHtml(j.nombre)}</strong>
                             ${j.nombre_abreviado ? `<br><small style="color: #6c757d;">${escapeHtml(j.nombre_abreviado)}</small>` : ''}
                         </td>
-                        <td style="padding: 12px 15px; text-align: left;">${escapeHtml(j.posicion)}</td>
-                        <td style="padding: 12px 15px; text-align: center; color: var(--primary); font-weight: bold;">${j.goles || 0}</td>
-                        <td style="padding: 12px 15px; text-align: center; color: #f59e0b;">${j.tarjetas_amarillas || 0}</td>
-                        <td style="padding: 12px 15px; text-align: center; color: #ef4444;">${j.tarjetas_rojas || 0}</td>
-                        <td style="padding: 12px 15px; text-align: left;">${j.documento || '-'}</td>
-                        <td style="padding: 12px 15px; text-align: center; white-space: nowrap;">
-                            <button class="btn-small btn-info" onclick="editarJugador(${j.id}, '${escapeHtml(j.nombre)}', ${j.numero}, '${escapeHtml(j.posicion)}', '${j.documento || ''}', '${escapeHtml(j.nombre_abreviado || '')}', ${j.goles || 0}, ${j.tarjetas_amarillas || 0}, ${j.tarjetas_rojas || 0})" style="margin: 2px;">✏️</button>
-                            <button class="btn-small btn-success" onclick="agregarGolJugador(${j.id}, '${escapeHtml(j.nombre)}')" style="margin: 2px;">⚽+1</button>
-                            <button class="btn-small btn-warning" onclick="agregarTarjetaAmarilla(${j.id}, '${escapeHtml(j.nombre)}')" style="margin: 2px;">🟨+1</button>
-                            <button class="btn-small btn-danger" onclick="agregarTarjetaRoja(${j.id}, '${escapeHtml(j.nombre)}')" style="margin: 2px;">🟥+1</button>
-                            <button class="btn-small btn-danger" onclick="eliminarJugador(${j.id})" style="margin: 2px;">🗑️</button>
+                        <td>${escapeHtml(j.posicion)}</td>
+                        <td><strong style="color: var(--primary);">${j.goles || 0}</strong></td>
+                        <td><span style="color: #f59e0b;">${j.tarjetas_amarillas || 0}</span></td>
+                        <td><span style="color: #ef4444;">${j.tarjetas_rojas || 0}</span></td>
+                        <td>${j.documento || '-'}</td>
+                        <td class="acciones">
+                            <button class="btn-small btn-info" onclick="editarJugador(${j.id}, '${escapeHtml(j.nombre)}', ${j.numero}, '${escapeHtml(j.posicion)}', '${j.documento || ''}', '${escapeHtml(j.nombre_abreviado || '')}', ${j.goles || 0}, ${j.tarjetas_amarillas || 0}, ${j.tarjetas_rojas || 0})">✏️</button>
+                            <button class="btn-small btn-success" onclick="agregarGolJugador(${j.id}, '${escapeHtml(j.nombre)}')">⚽+1</button>
+                            <button class="btn-small btn-warning" onclick="agregarTarjetaAmarilla(${j.id}, '${escapeHtml(j.nombre)}')">🟨+1</button>
+                            <button class="btn-small btn-danger" onclick="agregarTarjetaRoja(${j.id}, '${escapeHtml(j.nombre)}')">🟥+1</button>
+                            <button class="btn-small btn-danger" onclick="eliminarJugador(${j.id})">🗑️</button>
                         </td>
                     </tr>
                 `;
-            });
+            }
             
             html += `
                         </tbody>
@@ -963,6 +1043,7 @@
             `;
             
             document.getElementById('jugadoresList').innerHTML = html;
+            
         } catch (error) {
             console.error('Error cargando jugadores:', error);
             document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">Error al cargar jugadores: ' + error.message + '</p>';
@@ -1027,7 +1108,6 @@
             
             console.log('Status de respuesta:', response.status);
             
-            // Intentar obtener la respuesta como JSON
             let data;
             const responseText = await response.text();
             console.log('Respuesta raw:', responseText);
@@ -1041,12 +1121,10 @@
             }
             
             if (response.ok && data.success) {
-                // Éxito
                 alert('✅ Jugador agregado correctamente');
                 cerrarModal('modalJugador');
                 document.getElementById('formAgregarJugador').reset();
                 
-                // Recargar la lista de jugadores
                 if (equipoSeleccionadoJugadores && equipoSeleccionadoJugadores == equipoId) {
                     await cargarJugadores();
                 } else {
@@ -1055,14 +1133,12 @@
                     await cargarJugadores();
                 }
             } else {
-                // Error: mostrar mensaje específico
                 let errorMsg = data.error || 'No se pudo agregar el jugador';
                 
                 if (response.status === 400 && (errorMsg.includes('número') || errorMsg.includes('camiseta'))) {
                     alert(`❌ El número ${numero} ya está en uso en este equipo. Usa otro número.`);
                 } else if (response.status === 500) {
                     alert('❌ Error en el servidor (500). Revisa los logs de Render.\n\nEl jugador podría haberse guardado, actualiza la página para verificarlo.');
-                    // Intentar recargar la lista por si acaso
                     if (equipoId) {
                         equipoSeleccionadoJugadores = equipoId;
                         document.getElementById('equipoJugadoresSelect').value = equipoId;
@@ -1074,7 +1150,7 @@
             }
         } catch (error) {
             console.error('Error de red:', error);
-            alert('❌ Error de conexión: No se pudo contactar al servidor.\n\nDetalle: ' + error.message + '\n\nRevisa que el servidor esté funcionando correctamente.');
+            alert('❌ Error de conexión: No se pudo contactar al servidor.\n\nDetalle: ' + error.message);
         } finally {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
@@ -1252,7 +1328,7 @@
                 <td>${escapeHtml(t.nombre)}${t.especialidad ? `<br><small>${escapeHtml(t.especialidad)}</small>` : ''}</td>
                 <td>${t.documento || '-'}</td>
                 <td style="text-align:center"><button class="btn-small btn-danger" onclick="eliminarTecnico(${t.id})">🗑️</button></td>
-            </tr>`;
+            <tr>`;
         });
         html += `</tbody>}</div>`;
         document.getElementById('tecnicoList').innerHTML = html;
@@ -1326,7 +1402,7 @@
         pendientes.forEach(p => {
             html += `<tr style="border-bottom: 1px solid #e5e7eb;"><td style="padding: 12px 15px; font-weight: bold; border-right: 1px solid #e5e7eb;">${escapeHtml(p.nombre_local)}</td><td style="padding: 12px 15px; font-weight: bold; border-right: 1px solid #e5e7eb;">${escapeHtml(p.nombre_visitante)}</td><td style="padding: 12px 15px; text-align: center;">${p.fecha || 'Por definir'}</td><td style="padding: 12px 15px; text-align: center;">${p.hora || 'Por definir'}</td><td style="padding: 12px 15px;">${p.cancha || 'Por definir'}</td><td style="padding: 12px 15px; text-align: center; white-space: nowrap;"><button class="btn-small btn-warning" onclick="mostrarModalEditarPartido(${p.id}, '${p.fecha || ''}', '${p.hora || ''}', '${p.cancha || ''}')" style="margin: 2px;">✏️</button><button class="btn-small btn-success" onclick="mostrarModalResultado(${p.id}, '${escapeHtml(p.nombre_local)}', '${escapeHtml(p.nombre_visitante)}', ${p.id_local}, ${p.id_visitante})" style="margin: 2px;">📝</button></td></tr>`;
         });
-        html += `</tbody>}</div>`;
+        html += `</tbody></table></div>`;
         document.getElementById('fixtureList').innerHTML = html;
     }
 
@@ -1400,7 +1476,7 @@
             document.getElementById('resultadosList').innerHTML = '<p class="info-mensaje">No hay partidos jugados</p>'; 
             return; 
         }
-        let html = `<div class="table-container"><tr><thead><tr><th>Local</th><th style="text-align:center">Resultado</th><th>Visitante</th><th>Goleadoras</th><th style="text-align:center">Fecha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        let html = `<div class="table-container"><table><thead><tr><th>Local</th><th style="text-align:center">Resultado</th><th>Visitante</th><th>Goleadoras</th><th style="text-align:center">Fecha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
         for (const p of jugados) {
             let goleadoresHtml = '';
             if (p.goleadores_local?.length) goleadoresHtml += `<div><span style="color:var(--primary);">🏠 ${p.goleadores_local.map(g => g.nombre).join(', ')}</span></div>`;
@@ -1499,7 +1575,7 @@
             document.getElementById('rankingGoleadores').innerHTML = '<p class="info-mensaje">No hay goles registrados</p>'; 
             return; 
         }
-        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"><td><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
+        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"></table><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
         goleadores.forEach((g, idx) => {
             let medalla = idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':'';
             html += `<tr>
