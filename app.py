@@ -856,7 +856,7 @@ def agregar_jugador_por_nombre(torneo_id):
 
     return jsonify({'error': f'El número {numero} ya está en uso en el equipo {equipo_encontrado.nombre}'}), 400
 
-# ==================== RUTAS DE JUGADORES - VERSIÓN CORREGIDA ====================
+# ==================== RUTAS DE JUGADORES - VERSIÓN COMPLETAMENTE CORREGIDA ====================
 
 @app.route('/api/torneo/<torneo_id>/equipo/<int:equipo_id>/jugadores', methods=['GET', 'POST', 'DELETE'])
 @login_required
@@ -884,32 +884,22 @@ def gestion_jugadores(torneo_id, equipo_id):
         print(f"   Número: {data.get('numero')}")
         print(f"   Posición: {data.get('posicion')}")
         
-        # ========== VALIDACIÓN PARA EVITAR ERRORES DE TIPO EN POSTGRESQL ==========
-        # Convertir valores vacíos a None para PostgreSQL
-        altura = data.get('altura')
-        if altura == '' or altura is None:
-            altura = None
-        else:
-            try:
-                altura = float(altura) if altura else None
-            except (ValueError, TypeError):
-                altura = None
-                
-        peso = data.get('peso')
-        if peso == '' or peso is None:
-            peso = None
-        else:
-            try:
-                peso = float(peso) if peso else None
-            except (ValueError, TypeError):
-                peso = None
+        # ========== VALIDACIÓN COMPLETA PARA POSTGRESQL ==========
+        # Convertir valores vacíos a None para que PostgreSQL los trate como NULL
         
-        # Fecha de nacimiento: si es cadena vacía, convertir a None
+        # Campos de texto que pueden venir vacíos
+        nombre_abreviado = data.get('nombre_abreviado', '')
+        if nombre_abreviado == '':
+            nombre_abreviado = None
+            
+        documento = data.get('documento', '')
+        if documento == '':
+            documento = None
+            
         fecha_nacimiento = data.get('fecha_nacimiento', '')
         if fecha_nacimiento == '':
             fecha_nacimiento = None
-        
-        # Teléfono y email: si son vacíos, convertir a None
+            
         telefono = data.get('telefono', '')
         if telefono == '':
             telefono = None
@@ -918,48 +908,71 @@ def gestion_jugadores(torneo_id, equipo_id):
         if email == '':
             email = None
             
-        documento = data.get('documento', '')
-        if documento == '':
-            documento = None
+        pierna_habil = data.get('pierna_habil', '')
+        if pierna_habil == '':
+            pierna_habil = None
+        
+        # Campos numéricos: convertir a None si son vacíos o no válidos
+        altura = data.get('altura')
+        if altura is None or altura == '':
+            altura = None
+        else:
+            try:
+                altura = float(altura)
+            except (ValueError, TypeError):
+                altura = None
+                
+        peso = data.get('peso')
+        if peso is None or peso == '':
+            peso = None
+        else:
+            try:
+                peso = float(peso)
+            except (ValueError, TypeError):
+                peso = None
+        
         # ========== FIN VALIDACIÓN ==========
         
-        if equipo.agregar_jugador(
-            nombre=data['nombre'],
-            numero=data['numero'],
-            posicion=data['posicion'],
-            nombre_abreviado=data.get('nombre_abreviado', ''),
-            documento=documento,
-            fecha_nacimiento=fecha_nacimiento,
-            telefono=telefono,
-            email=email,
-            altura=altura,
-            peso=peso,
-            pierna_habil=data.get('pierna_habil', '')
-        ):
-            print(f"   ✅ Jugador agregado en memoria. Total ahora: {len(equipo.jugadores)}")
-            
-            # Crear backup antes de guardar
-            crear_backup_automatico()
-            
-            # Guardar en BD
-            save_torneo(torneo_id)
-            
-            # Verificar que se guardó
-            from database import get_db
-            conn = get_db()
-            cursor = conn.cursor()
-            if DATABASE_URL:
-                cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = %s", (equipo_id,))
+        try:
+            if equipo.agregar_jugador(
+                nombre=data['nombre'],
+                numero=data['numero'],
+                posicion=data['posicion'],
+                nombre_abreviado=nombre_abreviado,
+                documento=documento,
+                fecha_nacimiento=fecha_nacimiento,
+                telefono=telefono,
+                email=email,
+                altura=altura,
+                peso=peso,
+                pierna_habil=pierna_habil
+            ):
+                print(f"   ✅ Jugador agregado en memoria. Total ahora: {len(equipo.jugadores)}")
+                
+                # Guardar en BD
+                save_torneo(torneo_id)
+                
+                # Verificar que se guardó
+                from database import get_db
+                conn = get_db()
+                cursor = conn.cursor()
+                if DATABASE_URL:
+                    cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = %s", (equipo_id,))
+                else:
+                    cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = ?", (equipo_id,))
+                count = cursor.fetchone()[0]
+                conn.close()
+                print(f"   📊 Jugadores en BD después de guardar: {count}")
+                
+                return jsonify({'success': True, 'mensaje': 'Jugador agregado'})
             else:
-                cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = ?", (equipo_id,))
-            count = cursor.fetchone()[0]
-            conn.close()
-            print(f"   📊 Jugadores en BD después de guardar: {count}")
-            
-            return jsonify({'success': True, 'mensaje': 'Jugador agregado'})
-        else:
-            print(f"   ❌ Error: Número {data['numero']} ya existe")
-            return jsonify({'error': 'Número de camiseta ya existe'}), 400
+                print(f"   ❌ Error: Número {data['numero']} ya existe")
+                return jsonify({'error': f'Número de camiseta {data["numero"]} ya existe en este equipo'}), 400
+        except Exception as e:
+            print(f"   ❌ Excepción al agregar jugador: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Error interno: {str(e)}'}), 500
 
     elif request.method == 'DELETE':
         jugador_id = request.json.get('jugador_id')
@@ -1000,7 +1013,7 @@ def gestion_jugadores(torneo_id, equipo_id):
 
             if exists:
                 print(f"⚠️ ADVERTENCIA: El jugador {jugador_id} aún existe en la BD después de eliminar")
-                return jsonify({'error': 'Error al eliminar de la base de datos'}, 500)
+                return jsonify({'error': 'Error al eliminar de la base de datos'}), 500
 
             print(f"✅ Jugador {jugador.nombre} eliminado correctamente")
             return jsonify({'success': True, 'mensaje': 'Jugador eliminado'})
