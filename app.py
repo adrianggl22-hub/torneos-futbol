@@ -1,4 +1,4 @@
-# app.py - Versión para PythonAnywhere
+# app.py - Versión para Render con PostgreSQL
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file, flash
 from models import Torneo
 import uuid
@@ -11,7 +11,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 import io
 from functools import wraps
-from database import init_db, guardar_torneo, cargar_torneos, verificar_usuario, obtener_usuario_por_id
+from database import init_db, guardar_torneo, cargar_torneos, verificar_usuario, obtener_usuario_por_id, DATABASE_URL
 
 # ==================== CONFIGURACIÓN DE RUTAS ABSOLUTAS ====================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -103,18 +103,27 @@ def save_torneo(torneo_id):
         guardar_torneo(torneos[torneo_id])
         print(f"💾 Torneo '{torneos[torneo_id].nombre}' guardado en BD")
         
-        # Verificar que se guardó correctamente
-        from database import get_db
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM torneos WHERE id = ?", (torneo_id,))
-        count = cursor.fetchone()[0]
-        conn.close()
-        
-        if count > 0:
-            print(f"   ✅ Verificado: Torneo existe en BD")
-        else:
-            print(f"   ⚠️ ADVERTENCIA: Torneo no encontrado en BD después de guardar")
+        # Verificar que se guardó correctamente (adaptado para PostgreSQL)
+        try:
+            from database import get_db
+            conn = get_db()
+            cursor = conn.cursor()
+            
+            # Usar placeholder correcto según la base de datos
+            if DATABASE_URL:
+                cursor.execute("SELECT COUNT(*) FROM torneos WHERE id = %s", (torneo_id,))
+            else:
+                cursor.execute("SELECT COUNT(*) FROM torneos WHERE id = ?", (torneo_id,))
+            
+            count = cursor.fetchone()[0]
+            conn.close()
+            
+            if count > 0:
+                print(f"   ✅ Verificado: Torneo existe en BD")
+            else:
+                print(f"   ⚠️ ADVERTENCIA: Torneo no encontrado en BD después de guardar")
+        except Exception as e:
+            print(f"   ⚠️ Error en verificación: {e}")
 
 # ==================== RUTAS DE AUTENTICACIÓN ====================
 
@@ -699,7 +708,7 @@ def eliminar_torneo(torneo_id):
         'mensaje': f'Torneo "{nombre_torneo}" eliminado correctamente'
     })
 
-# ==================== RUTA PARA LISTAR TORNEOS (con opción de eliminar) ====================
+# ==================== RUTA PARA LISTAR TORNEOS ====================
 
 @app.route('/api/torneos/listar')
 @admin_required
@@ -876,7 +885,10 @@ def gestion_jugadores(torneo_id, equipo_id):
             from database import get_db
             conn = get_db()
             cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = ?", (equipo_id,))
+            if DATABASE_URL:
+                cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = %s", (equipo_id,))
+            else:
+                cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = ?", (equipo_id,))
             count = cursor.fetchone()[0]
             conn.close()
             print(f"   📊 Jugadores en BD después de guardar: {count}")
@@ -909,12 +921,17 @@ def gestion_jugadores(torneo_id, equipo_id):
             from database import get_db
             conn = get_db()
             cursor = conn.cursor()
-            cursor.execute('DELETE FROM jugadores WHERE id = ? AND equipo_id = ?',
-                          (jugador_id, equipo_id))
+            if DATABASE_URL:
+                cursor.execute('DELETE FROM jugadores WHERE id = %s AND equipo_id = %s', (jugador_id, equipo_id))
+            else:
+                cursor.execute('DELETE FROM jugadores WHERE id = ? AND equipo_id = ?', (jugador_id, equipo_id))
             conn.commit()
 
             # Verificar que se eliminó correctamente
-            cursor.execute('SELECT COUNT(*) FROM jugadores WHERE id = ?', (jugador_id,))
+            if DATABASE_URL:
+                cursor.execute('SELECT COUNT(*) FROM jugadores WHERE id = %s', (jugador_id,))
+            else:
+                cursor.execute('SELECT COUNT(*) FROM jugadores WHERE id = ?', (jugador_id,))
             exists = cursor.fetchone()[0] > 0
             conn.close()
 
@@ -1051,12 +1068,17 @@ def gestion_miembro_cuerpo_tecnico(torneo_id, equipo_id, miembro_id):
             from database import get_db
             conn = get_db()
             cursor = conn.cursor()
-            cursor.execute('DELETE FROM cuerpo_tecnico WHERE id = ? AND equipo_id = ?',
-                          (miembro_id, equipo_id))
+            if DATABASE_URL:
+                cursor.execute('DELETE FROM cuerpo_tecnico WHERE id = %s AND equipo_id = %s', (miembro_id, equipo_id))
+            else:
+                cursor.execute('DELETE FROM cuerpo_tecnico WHERE id = ? AND equipo_id = ?', (miembro_id, equipo_id))
             conn.commit()
 
             # Verificar que se eliminó correctamente
-            cursor.execute('SELECT COUNT(*) FROM cuerpo_tecnico WHERE id = ?', (miembro_id,))
+            if DATABASE_URL:
+                cursor.execute('SELECT COUNT(*) FROM cuerpo_tecnico WHERE id = %s', (miembro_id,))
+            else:
+                cursor.execute('SELECT COUNT(*) FROM cuerpo_tecnico WHERE id = ?', (miembro_id,))
             exists = cursor.fetchone()[0] > 0
             conn.close()
 
@@ -1468,16 +1490,28 @@ def verificar_datos():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT COUNT(*) FROM jugadores")
-    total_jugadores = cursor.fetchone()[0]
-    
-    cursor.execute("""
-        SELECT e.nombre, COUNT(j.id) as total
-        FROM equipos e
-        LEFT JOIN jugadores j ON e.id = j.equipo_id
-        GROUP BY e.id
-    """)
-    equipos = cursor.fetchall()
+    if DATABASE_URL:
+        cursor.execute("SELECT COUNT(*) FROM jugadores")
+        total_jugadores = cursor.fetchone()[0]
+        
+        cursor.execute("""
+            SELECT e.nombre, COUNT(j.id) as total
+            FROM equipos e
+            LEFT JOIN jugadores j ON e.id = j.equipo_id
+            GROUP BY e.id
+        """)
+        equipos = cursor.fetchall()
+    else:
+        cursor.execute("SELECT COUNT(*) FROM jugadores")
+        total_jugadores = cursor.fetchone()[0]
+        
+        cursor.execute("""
+            SELECT e.nombre, COUNT(j.id) as total
+            FROM equipos e
+            LEFT JOIN jugadores j ON e.id = j.equipo_id
+            GROUP BY e.id
+        """)
+        equipos = cursor.fetchall()
     
     conn.close()
     
@@ -1487,6 +1521,5 @@ def verificar_datos():
     })
 
 # ==================== INICIO DE LA APLICACIÓN (SOLO PARA DESARROLLO LOCAL) ====================
-# En PythonAnywhere, esto no se ejecuta - usa wsgi.py en su lugar
 if __name__ == '__main__':
     app.run(debug=False)
