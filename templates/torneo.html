@@ -64,6 +64,7 @@
         width: 100%;
         border-collapse: collapse;
         font-size: 14px;
+        min-width: 600px;
     }
     th, td {
         padding: 12px 15px;
@@ -76,6 +77,15 @@
         font-weight: 600;
         position: sticky;
         top: 0;
+    }
+    /* Forzar separación de columnas */
+    .fixture-table td:first-child, 
+    .fixture-table th:first-child {
+        border-right: 2px solid #e5e7eb;
+    }
+    .fixture-table td:nth-child(2),
+    .fixture-table th:nth-child(2) {
+        border-right: 2px solid #e5e7eb;
     }
     tr:hover {
         background-color: var(--gray-50);
@@ -913,7 +923,7 @@
                 </td>
             </tr>`;
         });
-        html += `</tbody></tr></div>`;
+        html += `</tbody></table></div>`;
         document.getElementById('jugadoresList').innerHTML = html;
     }
     
@@ -1102,7 +1112,7 @@
             document.getElementById('tecnicoList').innerHTML = '<p class="info-mensaje">No hay miembros registrados</p>'; 
             return; 
         }
-        let html = `<div class="table-container"><td><thead><tr><th>Rol</th><th>Nombre</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        let html = `<div class="table-container"><tr><thead><tr><th>Rol</th><th>Nombre</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
         tecnicos.forEach(t => { 
             html += `<tr>
                 <td><strong>${escapeHtml(t.rol)}</strong></td>
@@ -1111,7 +1121,7 @@
                 <td style="text-align:center"><button class="btn-small btn-danger" onclick="eliminarTecnico(${t.id})">🗑️</button></td>
             </tr>`;
         });
-        html += `</tbody></table></div>`;
+        html += `</tbody>}</div>`;
         document.getElementById('tecnicoList').innerHTML = html;
     }
     
@@ -1140,7 +1150,7 @@
             }).then(() => cargarCuerpoTecnico()); 
     }
 
-    // ==================== FIXTURE ====================
+    // ==================== FIXTURE - VERSIÓN CORREGIDA CON SEPARACIÓN DE COLUMNAS ====================
     async function generarFixture() { 
         if (!confirm('⚠️ ¿Generar nuevo fixture?')) return;
         const btn = event.target;
@@ -1179,22 +1189,46 @@
             document.getElementById('fixtureList').innerHTML = '<p class="info-mensaje">No hay partidos programados</p>'; 
             return; 
         }
-        let html = `<div class="table-container"></td><thead><tr><th>Local</th><th>Visitante</th><th style="text-align:center">Fecha</th><th style="text-align:center">Hora</th><th>Cancha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        // Tabla con clase específica para mejor visualización
+        let html = `<div class="table-container fixture-container">`;
+        html += `<table class="fixture-table" style="width: 100%; border-collapse: collapse; min-width: 700px;">`;
+        html += `<thead>`;
+        html += `<tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;">`;
+        html += `<th style="padding: 12px 15px; text-align: left; border-right: 2px solid rgba(255,255,255,0.3);">🏠 LOCAL</th>`;
+        html += `<th style="padding: 12px 15px; text-align: left; border-right: 2px solid rgba(255,255,255,0.3);">✈️ VISITANTE</th>`;
+        html += `<th style="padding: 12px 15px; text-align: center;">📅 FECHA</th>`;
+        html += `<th style="padding: 12px 15px; text-align: center;">⏰ HORA</th>`;
+        html += `<th style="padding: 12px 15px; text-align: left;">🏟️ CANCHA</th>`;
+        html += `<th style="padding: 12px 15px; text-align: center;">⚡ ACCIONES</th>`;
+        html += `</tr></thead><tbody>`;
+        
         pendientes.forEach(p => {
-            html += `<tr>
-                <td><strong>${escapeHtml(p.nombre_local)}</strong></td>
-                <td><strong>${escapeHtml(p.nombre_visitante)}</strong></td>
-                <td style="text-align:center">${p.fecha || 'Por definir'}</td>
-                <td style="text-align:center">${p.hora || 'Por definir'}</td>
-                <td>${p.cancha || 'Por definir'}</td>
-                <td style="text-align:center">
-                    <button class="btn-small btn-warning" onclick="mostrarModalEditarPartido(${p.id}, '${p.fecha || ''}', '${p.hora || ''}', '${p.cancha || ''}')">✏️</button>
-                    <button class="btn-small btn-success" onclick="mostrarModalResultado(${p.id}, '${escapeHtml(p.nombre_local)}', '${escapeHtml(p.nombre_visitante)}', ${p.id_local}, ${p.id_visitante})">📝</button>
-                </td>
-            </tr>`;
+            html += `<tr style="border-bottom: 1px solid #e5e7eb;">`;
+            html += `<td style="padding: 12px 15px; font-weight: bold; border-right: 1px solid #e5e7eb;">${escapeHtml(p.nombre_local)}</td>`;
+            html += `<td style="padding: 12px 15px; font-weight: bold; border-right: 1px solid #e5e7eb;">${escapeHtml(p.nombre_visitante)}</td>`;
+            html += `<td style="padding: 12px 15px; text-align: center;">${p.fecha || 'Por definir'}</td>`;
+            html += `<td style="padding: 12px 15px; text-align: center;">${p.hora || 'Por definir'}</td>`;
+            html += `<td style="padding: 12px 15px;">${p.cancha || 'Por definir'}</td>`;
+            html += `<td style="padding: 12px 15px; text-align: center; white-space: nowrap;">
+                        <button class="btn-small btn-warning" onclick="mostrarModalEditarPartido(${p.id}, '${p.fecha || ''}', '${p.hora || ''}', '${p.cancha || ''}')" style="margin: 2px;">✏️</button>
+                        <button class="btn-small btn-success" onclick="mostrarModalResultado(${p.id}, '${escapeHtml(p.nombre_local)}', '${escapeHtml(p.nombre_visitante)}', ${p.id_local}, ${p.id_visitante})" style="margin: 2px;">📝</button>
+                    </td>`;
+            html += `</tr>`;
         });
         html += `</tbody></table></div>`;
+        
+        // Agregar CSS adicional para asegurar separación
+        const styleFix = document.createElement('style');
+        styleFix.textContent = `
+            .fixture-table td:first-child, .fixture-table th:first-child {
+                border-right: 2px solid #e5e7eb;
+            }
+            .fixture-table td:nth-child(2), .fixture-table th:nth-child(2) {
+                border-right: 2px solid #e5e7eb;
+            }
+        `;
         document.getElementById('fixtureList').innerHTML = html;
+        document.head.appendChild(styleFix);
     }
 
     // ==================== EDITAR PARTIDO ====================
@@ -1267,7 +1301,7 @@
             document.getElementById('resultadosList').innerHTML = '<p class="info-mensaje">No hay partidos jugados</p>'; 
             return; 
         }
-        let html = `<div class="table-container"><tr><thead><tr><th>Local</th><th style="text-align:center">Resultado</th><th>Visitante</th><th>Goleadoras</th><th style="text-align:center">Fecha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        let html = `<div class="table-container"><table><thead><tr><th>Local</th><th style="text-align:center">Resultado</th><th>Visitante</th><th>Goleadoras</th><th style="text-align:center">Fecha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
         for (const p of jugados) {
             let goleadoresHtml = '';
             if (p.goleadores_local?.length) goleadoresHtml += `<div><span style="color:var(--primary);">🏠 ${p.goleadores_local.map(g => g.nombre).join(', ')}</span></div>`;
@@ -1286,7 +1320,7 @@
                 </td>
             </tr>`;
         }
-        html += `</tbody></table></div>`;
+        html += `</tbody>}</div>`;
         document.getElementById('resultadosList').innerHTML = html;
     }
 
@@ -1366,7 +1400,7 @@
             document.getElementById('rankingGoleadores').innerHTML = '<p class="info-mensaje">No hay goles registrados</p>'; 
             return; 
         }
-        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"><tr><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
+        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"><table><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
         goleadores.forEach((g, idx) => {
             let medalla = idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':'';
             html += `<tr>
@@ -1377,7 +1411,7 @@
                 <td style="text-align:center;">#${g.numero||'-'}</td>
             </tr>`;
         });
-        html += `</tbody></tr></div>`;
+        html += `</tbody>}</div>`;
         document.getElementById('rankingGoleadores').innerHTML = html;
     }
 
@@ -1487,7 +1521,7 @@
                 <td>${c.posicion === 1 ? '🏆 Líder' : c.posicion === 2 ? '🥈 Sub-líder' : c.posicion === 3 ? '🥉 Tercero' : '✅ Clasificado'}</td>
             </tr>`;
         });
-        html += `</tbody></table>`;
+        html += `</tbody></tr>`;
         document.getElementById('clasificadosPlayoffs').innerHTML = html;
         
         // Mostrar llaves
