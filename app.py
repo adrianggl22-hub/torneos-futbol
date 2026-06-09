@@ -668,6 +668,54 @@ def crear_torneo():
 
     return jsonify({'id': torneo_id, 'nombre': nombre})
 
+# ==================== RUTA PARA ELIMINAR TORNEO ====================
+
+@app.route('/api/torneo/<torneo_id>/eliminar', methods=['DELETE'])
+@admin_required
+def eliminar_torneo(torneo_id):
+    """Elimina un torneo completamente"""
+    if torneo_id not in torneos:
+        return jsonify({'error': 'Torneo no encontrado'}), 404
+    
+    nombre_torneo = torneos[torneo_id].nombre
+    
+    # Eliminar el torneo del diccionario
+    del torneos[torneo_id]
+    
+    # Guardar los cambios (esto eliminará el torneo de la BD)
+    from database import get_db
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Eliminar de la base de datos PostgreSQL
+    cursor.execute("DELETE FROM torneos WHERE id = %s", (torneo_id,))
+    conn.commit()
+    conn.close()
+    
+    print(f"🗑️ Torneo '{nombre_torneo}' (ID: {torneo_id}) eliminado permanentemente")
+    
+    return jsonify({
+        'success': True, 
+        'mensaje': f'Torneo "{nombre_torneo}" eliminado correctamente'
+    })
+
+# ==================== RUTA PARA LISTAR TORNEOS (con opción de eliminar) ====================
+
+@app.route('/api/torneos/listar')
+@admin_required
+def listar_torneos():
+    """Lista todos los torneos con opción de eliminar"""
+    lista = []
+    for torneo_id, torneo in torneos.items():
+        lista.append({
+            'id': torneo_id,
+            'nombre': torneo.nombre,
+            'categoria': torneo.categoria,
+            'equipos': len(torneo.equipos),
+            'partidos': len(torneo.partidos)
+        })
+    return jsonify(lista)
+
 @app.route('/api/torneo/<torneo_id>/info')
 @login_required
 def torneo_info(torneo_id):
