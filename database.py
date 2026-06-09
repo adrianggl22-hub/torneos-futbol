@@ -198,7 +198,7 @@ def init_db():
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS jugadores (
-            id SERIAL PRIMARY KEY,
+            id SERIAL,
             equipo_id INTEGER REFERENCES equipos(id) ON DELETE CASCADE,
             nombre TEXT NOT NULL,
             numero INTEGER,
@@ -216,7 +216,8 @@ def init_db():
             tarjetas_amarillas INTEGER DEFAULT 0,
             tarjetas_rojas INTEGER DEFAULT 0,
             partidos_jugados INTEGER DEFAULT 0,
-            minutos_jugados INTEGER DEFAULT 0
+            minutos_jugados INTEGER DEFAULT 0,
+            PRIMARY KEY (id, equipo_id)
         )
     ''')
     
@@ -416,7 +417,11 @@ def guardar_torneo(torneo):
                   equipo.puntos, equipo.partidos_jugados, equipo.ganados, equipo.empatados, equipo.perdidos,
                   equipo.goles_favor, equipo.goles_contra))
             
-            # Guardar jugadores del equipo (SOLO INSERT/UPDATE, NO DELETE)
+            # ========== ALTERNATIVA 2: DELETE + INSERT (EVITA ON CONFLICT) ==========
+            # Primero, eliminar todos los jugadores del equipo
+            cursor.execute('DELETE FROM jugadores WHERE equipo_id = %s', (equipo.id,))
+            
+            # Luego, insertar los jugadores actuales
             for jugador in equipo.jugadores.values():
                 cursor.execute('''
                     INSERT INTO jugadores 
@@ -424,30 +429,13 @@ def guardar_torneo(torneo):
                      fecha_nacimiento, telefono, email, altura, peso, pierna_habil,
                      goles, asistencias, tarjetas_amarillas, tarjetas_rojas, partidos_jugados, minutos_jugados)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id, equipo_id) DO UPDATE SET
-                        nombre = EXCLUDED.nombre,
-                        numero = EXCLUDED.numero,
-                        posicion = EXCLUDED.posicion,
-                        nombre_abreviado = EXCLUDED.nombre_abreviado,
-                        documento = EXCLUDED.documento,
-                        fecha_nacimiento = EXCLUDED.fecha_nacimiento,
-                        telefono = EXCLUDED.telefono,
-                        email = EXCLUDED.email,
-                        altura = EXCLUDED.altura,
-                        peso = EXCLUDED.peso,
-                        pierna_habil = EXCLUDED.pierna_habil,
-                        goles = EXCLUDED.goles,
-                        asistencias = EXCLUDED.asistencias,
-                        tarjetas_amarillas = EXCLUDED.tarjetas_amarillas,
-                        tarjetas_rojas = EXCLUDED.tarjetas_rojas,
-                        partidos_jugados = EXCLUDED.partidos_jugados,
-                        minutos_jugados = EXCLUDED.minutos_jugados
                 ''', (jugador.id, equipo.id, jugador.nombre, jugador.numero, jugador.posicion, jugador.nombre_abreviado,
                       jugador.documento, jugador.fecha_nacimiento, jugador.telefono, jugador.email, jugador.altura, jugador.peso,
                       jugador.pierna_habil, jugador.goles, jugador.asistencias, jugador.tarjetas_amarillas,
                       jugador.tarjetas_rojas, jugador.partidos_jugados, jugador.minutos_jugados))
             
             print(f"   💾 Jugadores guardados para equipo {equipo.nombre}: {len(equipo.jugadores)}")
+            # ========== FIN ALTERNATIVA 2 ==========
             
             # Guardar cuerpo técnico
             for miembro in equipo.cuerpo_tecnico.values():
