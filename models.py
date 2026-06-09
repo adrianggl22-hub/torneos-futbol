@@ -6,9 +6,9 @@ import json
 class Jugador:
     """Clase para representar un jugador"""
     def __init__(self, id: int, nombre: str, equipo_id: int, numero: int = 0, posicion: str = "",
-                 nombre_abreviado: str = "", documento: str = None, fecha_nacimiento: str = None,
+                 nombre_abreviado: str = None, documento: str = None, fecha_nacimiento: str = None,
                  telefono: str = None, email: str = None, altura: float = None, peso: float = None,
-                 pierna_habil: str = "", goles: int = 0, asistencias: int = 0,
+                 pierna_habil: str = None, goles: int = 0, asistencias: int = 0,
                  tarjetas_amarillas: int = 0, tarjetas_rojas: int = 0,
                  partidos_jugados: int = 0, minutos_jugados: int = 0):
         self.id = id
@@ -16,15 +16,15 @@ class Jugador:
         self.equipo_id = equipo_id
         self.numero = numero
         self.posicion = posicion
-        self.nombre_abreviado = nombre_abreviado
-        # Convertir cadenas vacías a None para PostgreSQL
+        # Convertir cadenas vacías o None a None para PostgreSQL
+        self.nombre_abreviado = nombre_abreviado if nombre_abreviado else None
         self.documento = documento if documento else None
         self.fecha_nacimiento = fecha_nacimiento if fecha_nacimiento else None
         self.telefono = telefono if telefono else None
         self.email = email if email else None
         self.altura = altura
         self.peso = peso
-        self.pierna_habil = pierna_habil
+        self.pierna_habil = pierna_habil if pierna_habil else None
         self.goles = goles
         self.asistencias = asistencias
         self.tarjetas_amarillas = tarjetas_amarillas
@@ -116,10 +116,10 @@ class Equipo:
         self.proximo_id_cuerpo_tecnico = 1
     
     def agregar_jugador(self, nombre: str, numero: int, posicion: str,
-                        nombre_abreviado: str = "", documento: str = None,
+                        nombre_abreviado: str = None, documento: str = None,
                         fecha_nacimiento: str = None, telefono: str = None,
                         email: str = None, altura: float = None, peso: float = None,
-                        pierna_habil: str = "") -> bool:
+                        pierna_habil: str = None) -> bool:
         """Agrega un jugador al equipo"""
         # Verificar que el número no esté en uso
         for jugador in self.jugadores.values():
@@ -127,10 +127,12 @@ class Equipo:
                 return False
         
         # Convertir valores vacíos a None
+        nombre_abreviado = nombre_abreviado if nombre_abreviado else None
         documento = documento if documento else None
         fecha_nacimiento = fecha_nacimiento if fecha_nacimiento else None
         telefono = telefono if telefono else None
         email = email if email else None
+        pierna_habil = pierna_habil if pierna_habil else None
         
         jugador = Jugador(
             id=self.proximo_id_jugador,
