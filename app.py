@@ -856,7 +856,7 @@ def agregar_jugador_por_nombre(torneo_id):
 
     return jsonify({'error': f'El número {numero} ya está en uso en el equipo {equipo_encontrado.nombre}'}), 400
 
-# ==================== RUTAS DE JUGADORES MEJORADAS ====================
+# ==================== RUTAS DE JUGADORES - VERSIÓN CORREGIDA ====================
 
 @app.route('/api/torneo/<torneo_id>/equipo/<int:equipo_id>/jugadores', methods=['GET', 'POST', 'DELETE'])
 @login_required
@@ -884,17 +884,56 @@ def gestion_jugadores(torneo_id, equipo_id):
         print(f"   Número: {data.get('numero')}")
         print(f"   Posición: {data.get('posicion')}")
         
+        # ========== VALIDACIÓN PARA EVITAR ERRORES DE TIPO EN POSTGRESQL ==========
+        # Convertir valores vacíos a None para PostgreSQL
+        altura = data.get('altura')
+        if altura == '' or altura is None:
+            altura = None
+        else:
+            try:
+                altura = float(altura) if altura else None
+            except (ValueError, TypeError):
+                altura = None
+                
+        peso = data.get('peso')
+        if peso == '' or peso is None:
+            peso = None
+        else:
+            try:
+                peso = float(peso) if peso else None
+            except (ValueError, TypeError):
+                peso = None
+        
+        # Fecha de nacimiento: si es cadena vacía, convertir a None
+        fecha_nacimiento = data.get('fecha_nacimiento', '')
+        if fecha_nacimiento == '':
+            fecha_nacimiento = None
+        
+        # Teléfono y email: si son vacíos, convertir a None
+        telefono = data.get('telefono', '')
+        if telefono == '':
+            telefono = None
+            
+        email = data.get('email', '')
+        if email == '':
+            email = None
+            
+        documento = data.get('documento', '')
+        if documento == '':
+            documento = None
+        # ========== FIN VALIDACIÓN ==========
+        
         if equipo.agregar_jugador(
             nombre=data['nombre'],
             numero=data['numero'],
             posicion=data['posicion'],
             nombre_abreviado=data.get('nombre_abreviado', ''),
-            documento=data.get('documento', ''),
-            fecha_nacimiento=data.get('fecha_nacimiento', ''),
-            telefono=data.get('telefono', ''),
-            email=data.get('email', ''),
-            altura=data.get('altura'),
-            peso=data.get('peso'),
+            documento=documento,
+            fecha_nacimiento=fecha_nacimiento,
+            telefono=telefono,
+            email=email,
+            altura=altura,
+            peso=peso,
             pierna_habil=data.get('pierna_habil', '')
         ):
             print(f"   ✅ Jugador agregado en memoria. Total ahora: {len(equipo.jugadores)}")
