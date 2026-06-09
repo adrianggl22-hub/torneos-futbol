@@ -124,6 +124,7 @@ class Equipo:
         # Verificar que el número no esté en uso
         for jugador in self.jugadores.values():
             if jugador.numero == numero:
+                print(f"   ❌ Número {numero} ya existe en el equipo")
                 return False
         
         # Convertir valores vacíos a None
@@ -134,8 +135,14 @@ class Equipo:
         email = email if email else None
         pierna_habil = pierna_habil if pierna_habil else None
         
+        # Usar el próximo ID disponible
+        nuevo_id = self.proximo_id_jugador
+        self.proximo_id_jugador += 1
+        
+        print(f"   📝 ID asignado: {nuevo_id} (próximo será: {self.proximo_id_jugador})")
+        
         jugador = Jugador(
-            id=self.proximo_id_jugador,
+            id=nuevo_id,
             nombre=nombre,
             equipo_id=self.id,
             numero=numero,
@@ -149,15 +156,18 @@ class Equipo:
             peso=peso,
             pierna_habil=pierna_habil
         )
-        self.jugadores[jugador.id] = jugador
-        self.proximo_id_jugador += 1
+        self.jugadores[nuevo_id] = jugador
+        print(f"   ✅ Jugador {nombre} agregado con ID {nuevo_id}")
         return True
     
     def eliminar_jugador(self, jugador_id: int) -> bool:
         """Elimina un jugador del equipo"""
         if jugador_id in self.jugadores:
+            jugador = self.jugadores[jugador_id]
+            print(f"   🗑️ Eliminando jugador ID: {jugador_id} - {jugador.nombre}")
             del self.jugadores[jugador_id]
             return True
+        print(f"   ⚠️ Jugador ID {jugador_id} no encontrado")
         return False
     
     def agregar_miembro_cuerpo_tecnico(self, nombre: str, rol: str,
