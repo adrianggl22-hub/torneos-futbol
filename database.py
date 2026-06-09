@@ -198,7 +198,7 @@ def init_db():
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS jugadores (
-            id SERIAL,
+            id SERIAL PRIMARY KEY,
             equipo_id INTEGER REFERENCES equipos(id) ON DELETE CASCADE,
             nombre TEXT NOT NULL,
             numero INTEGER,
@@ -216,8 +216,7 @@ def init_db():
             tarjetas_amarillas INTEGER DEFAULT 0,
             tarjetas_rojas INTEGER DEFAULT 0,
             partidos_jugados INTEGER DEFAULT 0,
-            minutos_jugados INTEGER DEFAULT 0,
-            PRIMARY KEY (id, equipo_id)
+            minutos_jugados INTEGER DEFAULT 0
         )
     ''')
     
@@ -324,7 +323,6 @@ def crear_usuarios_default_postgresql():
     
     cursor.execute("SELECT COUNT(*) FROM usuarios")
     result = cursor.fetchone()
-    # Con RealDictCursor, el resultado es un diccionario como {'count': 0}
     count = result['count'] if isinstance(result, dict) else result[0]
     
     if count == 0:
@@ -417,25 +415,54 @@ def guardar_torneo(torneo):
                   equipo.puntos, equipo.partidos_jugados, equipo.ganados, equipo.empatados, equipo.perdidos,
                   equipo.goles_favor, equipo.goles_contra))
             
-            # ========== ALTERNATIVA 2: DELETE + INSERT (EVITA ON CONFLICT) ==========
-            # Primero, eliminar todos los jugadores del equipo
-            cursor.execute('DELETE FROM jugadores WHERE equipo_id = %s', (equipo.id,))
-            
-            # Luego, insertar los jugadores actuales
+            # Guardar jugadores del equipo - Usando INSERT con verificación de existencia
             for jugador in equipo.jugadores.values():
-                cursor.execute('''
-                    INSERT INTO jugadores 
-                    (id, equipo_id, nombre, numero, posicion, nombre_abreviado, documento,
-                     fecha_nacimiento, telefono, email, altura, peso, pierna_habil,
-                     goles, asistencias, tarjetas_amarillas, tarjetas_rojas, partidos_jugados, minutos_jugados)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (jugador.id, equipo.id, jugador.nombre, jugador.numero, jugador.posicion, jugador.nombre_abreviado,
-                      jugador.documento, jugador.fecha_nacimiento, jugador.telefono, jugador.email, jugador.altura, jugador.peso,
-                      jugador.pierna_habil, jugador.goles, jugador.asistencias, jugador.tarjetas_amarillas,
-                      jugador.tarjetas_rojas, jugador.partidos_jugados, jugador.minutos_jugados))
+                # Verificar si el jugador ya existe
+                cursor.execute('SELECT id FROM jugadores WHERE id = %s AND equipo_id = %s', (jugador.id, equipo.id))
+                exists = cursor.fetchone()
+                
+                if exists:
+                    # Actualizar jugador existente
+                    cursor.execute('''
+                        UPDATE jugadores SET
+                            nombre = %s,
+                            numero = %s,
+                            posicion = %s,
+                            nombre_abreviado = %s,
+                            documento = %s,
+                            fecha_nacimiento = %s,
+                            telefono = %s,
+                            email = %s,
+                            altura = %s,
+                            peso = %s,
+                            pierna_habil = %s,
+                            goles = %s,
+                            asistencias = %s,
+                            tarjetas_amarillas = %s,
+                            tarjetas_rojas = %s,
+                            partidos_jugados = %s,
+                            minutos_jugados = %s
+                        WHERE id = %s AND equipo_id = %s
+                    ''', (jugador.nombre, jugador.numero, jugador.posicion, jugador.nombre_abreviado,
+                          jugador.documento, jugador.fecha_nacimiento, jugador.telefono, jugador.email,
+                          jugador.altura, jugador.peso, jugador.pierna_habil,
+                          jugador.goles, jugador.asistencias, jugador.tarjetas_amarillas,
+                          jugador.tarjetas_rojas, jugador.partidos_jugados, jugador.minutos_jugados,
+                          jugador.id, equipo.id))
+                else:
+                    # Insertar nuevo jugador
+                    cursor.execute('''
+                        INSERT INTO jugadores 
+                        (id, equipo_id, nombre, numero, posicion, nombre_abreviado, documento,
+                         fecha_nacimiento, telefono, email, altura, peso, pierna_habil,
+                         goles, asistencias, tarjetas_amarillas, tarjetas_rojas, partidos_jugados, minutos_jugados)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ''', (jugador.id, equipo.id, jugador.nombre, jugador.numero, jugador.posicion, jugador.nombre_abreviado,
+                          jugador.documento, jugador.fecha_nacimiento, jugador.telefono, jugador.email, jugador.altura, jugador.peso,
+                          jugador.pierna_habil, jugador.goles, jugador.asistencias, jugador.tarjetas_amarillas,
+                          jugador.tarjetas_rojas, jugador.partidos_jugados, jugador.minutos_jugados))
             
             print(f"   💾 Jugadores guardados para equipo {equipo.nombre}: {len(equipo.jugadores)}")
-            # ========== FIN ALTERNATIVA 2 ==========
             
             # Guardar cuerpo técnico
             for miembro in equipo.cuerpo_tecnico.values():
@@ -630,6 +657,10 @@ def cargar_torneos():
                 equipo.goles_contra = eq_row['goles_contra']
                 equipo.diferencia_goles = equipo.goles_favor - equipo.goles_contra
                 
+                # IMPORTANTE: Obtener el próximo_id_jugador
+                if equipo.jugadores:
+                    equipo.proximo_id_jugador = max(equipo.jugadores.keys()) + 1
+                
                 # Cargar jugadores
                 cursor.execute('SELECT * FROM jugadores WHERE equipo_id = %s', (equipo.id,))
                 for jug_row in cursor.fetchall():
@@ -702,7 +733,7 @@ def cargar_torneos():
                 
                 torneo.partidos[partido.id] = partido
         else:
-            # Modo SQLite
+            # Modo SQLite (similar)
             torneo = Torneo(
                 id_torneo=row['id'],
                 nombre=row['nombre'],
@@ -732,6 +763,10 @@ def cargar_torneos():
                 equipo.goles_favor = eq_row['goles_favor']
                 equipo.goles_contra = eq_row['goles_contra']
                 equipo.diferencia_goles = equipo.goles_favor - equipo.goles_contra
+                
+                # IMPORTANTE: Obtener el próximo_id_jugador
+                if equipo.jugadores:
+                    equipo.proximo_id_jugador = max(equipo.jugadores.keys()) + 1
                 
                 # Cargar jugadores (SQLite)
                 cursor.execute('SELECT * FROM jugadores WHERE equipo_id = ?', (equipo.id,))
