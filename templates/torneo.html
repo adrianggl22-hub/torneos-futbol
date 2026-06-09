@@ -891,7 +891,7 @@
             }).then(() => location.reload()); 
     }
 
-    // ==================== JUGADORES - VERSIÓN CORREGIDA ====================
+    // ==================== JUGADORES - VERSIÓN CORREGIDA CON DEBUG ====================
     document.getElementById('equipoJugadoresSelect')?.addEventListener('change', function() { 
         equipoSeleccionadoJugadores = this.value; 
         cargarJugadores(); 
@@ -904,12 +904,15 @@
         }
         try {
             const response = await fetch(`/api/torneo/${torneoId}/equipo/${equipoSeleccionadoJugadores}/jugadores`);
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
             const jugadores = await response.json();
             if (jugadores.length === 0) { 
                 document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">No hay jugadores registrados</p>'; 
                 return; 
             }
-            let html = `<div class="table-container"><table><thead><tr><th style="text-align:center">#</th><th>Nombre</th><th>Posición</th><th style="text-align:center">⚽ Goles</th><th style="text-align:center">🟨 TA</th><th style="text-align:center">🟥 TR</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+            let html = `<div class="table-container"><tr><thead><tr><th style="text-align:center">#</th><th>Nombre</th><th>Posición</th><th style="text-align:center">⚽ Goles</th><th style="text-align:center">🟨 TA</th><th style="text-align:center">🟥 TR</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
             jugadores.forEach(j => { 
                 html += `<tr>
                     <td style="text-align:center">${j.numero}</td>
@@ -932,7 +935,7 @@
             document.getElementById('jugadoresList').innerHTML = html;
         } catch (error) {
             console.error('Error cargando jugadores:', error);
-            document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">Error al cargar jugadores</p>';
+            document.getElementById('jugadoresList').innerHTML = '<p class="info-mensaje">Error al cargar jugadores: ' + error.message + '</p>';
         }
     }
 
@@ -992,10 +995,23 @@
                 })
             });
             
-            const data = await response.json();
-            console.log('Respuesta del servidor:', data); // Para depuración
+            console.log('Status de respuesta:', response.status);
             
-            if (data.success) {
+            // Intentar obtener la respuesta como JSON
+            let data;
+            const responseText = await response.text();
+            console.log('Respuesta raw:', responseText);
+            
+            try {
+                data = JSON.parse(responseText);
+                console.log('Respuesta parseada:', data);
+            } catch (e) {
+                console.error('Error al parsear JSON:', e);
+                data = { success: false, error: 'Error al procesar la respuesta del servidor: ' + responseText.substring(0, 200) };
+            }
+            
+            if (response.ok && data.success) {
+                // Éxito
                 alert('✅ Jugador agregado correctamente');
                 cerrarModal('modalJugador');
                 document.getElementById('formAgregarJugador').reset();
@@ -1009,17 +1025,26 @@
                     await cargarJugadores();
                 }
             } else {
-                alert('❌ Error: ' + (data.error || 'No se pudo agregar el jugador. El número de camiseta podría estar repetido.'));
+                // Error: mostrar mensaje específico
+                let errorMsg = data.error || 'No se pudo agregar el jugador';
+                
+                if (response.status === 400 && (errorMsg.includes('número') || errorMsg.includes('camiseta'))) {
+                    alert(`❌ El número ${numero} ya está en uso en este equipo. Usa otro número.`);
+                } else if (response.status === 500) {
+                    alert('❌ Error en el servidor (500). Revisa los logs de Render.\n\nEl jugador podría haberse guardado, actualiza la página para verificarlo.');
+                    // Intentar recargar la lista por si acaso
+                    if (equipoId) {
+                        equipoSeleccionadoJugadores = equipoId;
+                        document.getElementById('equipoJugadoresSelect').value = equipoId;
+                        await cargarJugadores();
+                    }
+                } else {
+                    alert(`❌ Error (${response.status}): ${errorMsg}`);
+                }
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('❌ Error de conexión. Verifica tu conexión a internet. El jugador podría haberse guardado, revisa la lista.');
-            // Intentamos recargar la lista por si acaso se guardó
-            if (equipoId) {
-                equipoSeleccionadoJugadores = equipoId;
-                document.getElementById('equipoJugadoresSelect').value = equipoId;
-                await cargarJugadores();
-            }
+            console.error('Error de red:', error);
+            alert('❌ Error de conexión: No se pudo contactar al servidor.\n\nDetalle: ' + error.message + '\n\nRevisa que el servidor esté funcionando correctamente.');
         } finally {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
@@ -1444,7 +1469,7 @@
             document.getElementById('rankingGoleadores').innerHTML = '<p class="info-mensaje">No hay goles registrados</p>'; 
             return; 
         }
-        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"><table><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
+        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"><td><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
         goleadores.forEach((g, idx) => {
             let medalla = idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':'';
             html += `<tr>
