@@ -98,32 +98,10 @@ def check_permission(f):
     return decorated_function
 
 def save_torneo(torneo_id):
-    """Guarda un torneo específico en la base de datos con verificación"""
+    """Guarda un torneo específico en la base de datos (sin verificación)"""
     if torneo_id in torneos:
         guardar_torneo(torneos[torneo_id])
         print(f"💾 Torneo '{torneos[torneo_id].nombre}' guardado en BD")
-        
-        # Verificar que se guardó correctamente (adaptado para PostgreSQL)
-        try:
-            from database import get_db
-            conn = get_db()
-            cursor = conn.cursor()
-            
-            # Usar placeholder correcto según la base de datos
-            if DATABASE_URL:
-                cursor.execute("SELECT COUNT(*) FROM torneos WHERE id = %s", (torneo_id,))
-            else:
-                cursor.execute("SELECT COUNT(*) FROM torneos WHERE id = ?", (torneo_id,))
-            
-            count = cursor.fetchone()[0]
-            conn.close()
-            
-            if count > 0:
-                print(f"   ✅ Verificado: Torneo existe en BD")
-            else:
-                print(f"   ⚠️ ADVERTENCIA: Torneo no encontrado en BD después de guardar")
-        except Exception as e:
-            print(f"   ⚠️ Error en verificación: {e}")
 
 # ==================== RUTAS DE AUTENTICACIÓN ====================
 
@@ -856,7 +834,7 @@ def agregar_jugador_por_nombre(torneo_id):
 
     return jsonify({'error': f'El número {numero} ya está en uso en el equipo {equipo_encontrado.nombre}'}), 400
 
-# ==================== RUTAS DE JUGADORES - VERSIÓN COMPLETAMENTE CORREGIDA ====================
+# ==================== RUTAS DE JUGADORES - VERSIÓN SIMPLIFICADA ====================
 
 @app.route('/api/torneo/<torneo_id>/equipo/<int:equipo_id>/jugadores', methods=['GET', 'POST', 'DELETE'])
 @login_required
@@ -884,54 +862,15 @@ def gestion_jugadores(torneo_id, equipo_id):
         print(f"   Número: {data.get('numero')}")
         print(f"   Posición: {data.get('posicion')}")
         
-        # ========== VALIDACIÓN COMPLETA PARA POSTGRESQL ==========
-        # Convertir valores vacíos a None para que PostgreSQL los trate como NULL
-        
-        # Campos de texto que pueden venir vacíos
-        nombre_abreviado = data.get('nombre_abreviado', '')
-        if nombre_abreviado == '':
-            nombre_abreviado = None
-            
-        documento = data.get('documento', '')
-        if documento == '':
-            documento = None
-            
-        fecha_nacimiento = data.get('fecha_nacimiento', '')
-        if fecha_nacimiento == '':
-            fecha_nacimiento = None
-            
-        telefono = data.get('telefono', '')
-        if telefono == '':
-            telefono = None
-            
-        email = data.get('email', '')
-        if email == '':
-            email = None
-            
-        pierna_habil = data.get('pierna_habil', '')
-        if pierna_habil == '':
-            pierna_habil = None
-        
-        # Campos numéricos: convertir a None si son vacíos o no válidos
+        # Convertir valores vacíos a None
+        nombre_abreviado = data.get('nombre_abreviado', '') or None
+        documento = data.get('documento', '') or None
+        fecha_nacimiento = data.get('fecha_nacimiento', '') or None
+        telefono = data.get('telefono', '') or None
+        email = data.get('email', '') or None
+        pierna_habil = data.get('pierna_habil', '') or None
         altura = data.get('altura')
-        if altura is None or altura == '':
-            altura = None
-        else:
-            try:
-                altura = float(altura)
-            except (ValueError, TypeError):
-                altura = None
-                
         peso = data.get('peso')
-        if peso is None or peso == '':
-            peso = None
-        else:
-            try:
-                peso = float(peso)
-            except (ValueError, TypeError):
-                peso = None
-        
-        # ========== FIN VALIDACIÓN ==========
         
         try:
             if equipo.agregar_jugador(
@@ -948,28 +887,12 @@ def gestion_jugadores(torneo_id, equipo_id):
                 pierna_habil=pierna_habil
             ):
                 print(f"   ✅ Jugador agregado en memoria. Total ahora: {len(equipo.jugadores)}")
-                
-                # Guardar en BD
                 save_torneo(torneo_id)
-                
-                # Verificar que se guardó
-                from database import get_db
-                conn = get_db()
-                cursor = conn.cursor()
-                if DATABASE_URL:
-                    cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = %s", (equipo_id,))
-                else:
-                    cursor.execute("SELECT COUNT(*) FROM jugadores WHERE equipo_id = ?", (equipo_id,))
-                count = cursor.fetchone()[0]
-                conn.close()
-                print(f"   📊 Jugadores en BD después de guardar: {count}")
-                
                 return jsonify({'success': True, 'mensaje': 'Jugador agregado'})
             else:
-                print(f"   ❌ Error: Número {data['numero']} ya existe")
                 return jsonify({'error': f'Número de camiseta {data["numero"]} ya existe en este equipo'}), 400
         except Exception as e:
-            print(f"   ❌ Excepción al agregar jugador: {str(e)}")
+            print(f"   ❌ Excepción: {str(e)}")
             import traceback
             traceback.print_exc()
             return jsonify({'error': f'Error interno: {str(e)}'}), 500
@@ -977,23 +900,16 @@ def gestion_jugadores(torneo_id, equipo_id):
     elif request.method == 'DELETE':
         jugador_id = request.json.get('jugador_id')
 
-        # Verificar si existe antes de eliminar
         if jugador_id not in equipo.jugadores:
             return jsonify({'error': 'Jugador no encontrado'}), 404
 
-        # Obtener información para debug
         jugador = equipo.jugadores[jugador_id]
-        print(f"🗑️ Eliminando jugador: {jugador.nombre} (ID: {jugador_id}) del equipo {equipo.nombre}")
+        print(f"🗑️ Eliminando jugador: {jugador.nombre} (ID: {jugador_id})")
 
-        # Eliminar de memoria
         if equipo.eliminar_jugador(jugador_id):
-            # Crear backup antes de guardar cambios
             crear_backup_automatico()
-            
-            # Guardar cambios en la base de datos
             save_torneo(torneo_id)
 
-            # Eliminar también de la BD directamente para asegurar
             from database import get_db
             conn = get_db()
             cursor = conn.cursor()
@@ -1002,20 +918,8 @@ def gestion_jugadores(torneo_id, equipo_id):
             else:
                 cursor.execute('DELETE FROM jugadores WHERE id = ? AND equipo_id = ?', (jugador_id, equipo_id))
             conn.commit()
-
-            # Verificar que se eliminó correctamente
-            if DATABASE_URL:
-                cursor.execute('SELECT COUNT(*) FROM jugadores WHERE id = %s', (jugador_id,))
-            else:
-                cursor.execute('SELECT COUNT(*) FROM jugadores WHERE id = ?', (jugador_id,))
-            exists = cursor.fetchone()[0] > 0
             conn.close()
 
-            if exists:
-                print(f"⚠️ ADVERTENCIA: El jugador {jugador_id} aún existe en la BD después de eliminar")
-                return jsonify({'error': 'Error al eliminar de la base de datos'}), 500
-
-            print(f"✅ Jugador {jugador.nombre} eliminado correctamente")
             return jsonify({'success': True, 'mensaje': 'Jugador eliminado'})
 
         return jsonify({'error': 'No se pudo eliminar el jugador'}), 500
@@ -1127,20 +1031,15 @@ def gestion_miembro_cuerpo_tecnico(torneo_id, equipo_id, miembro_id):
         return jsonify({'error': 'Miembro no encontrado'}), 404
 
     elif request.method == 'DELETE':
-        # Verificar si existe antes de eliminar
         if miembro_id not in equipo.cuerpo_tecnico:
             return jsonify({'error': 'Miembro no encontrado'}), 404
 
-        # Obtener información para debug
         miembro = equipo.cuerpo_tecnico[miembro_id]
-        print(f"🗑️ Eliminando miembro del cuerpo técnico: {miembro.nombre} (ID: {miembro_id}, Rol: {miembro.rol}) del equipo {equipo.nombre}")
+        print(f"🗑️ Eliminando miembro del cuerpo técnico: {miembro.nombre}")
 
-        # Eliminar de memoria
         if equipo.eliminar_miembro_cuerpo_tecnico(miembro_id):
-            # Guardar cambios en la base de datos
             save_torneo(torneo_id)
 
-            # Eliminar también de la BD directamente para asegurar
             from database import get_db
             conn = get_db()
             cursor = conn.cursor()
@@ -1149,20 +1048,8 @@ def gestion_miembro_cuerpo_tecnico(torneo_id, equipo_id, miembro_id):
             else:
                 cursor.execute('DELETE FROM cuerpo_tecnico WHERE id = ? AND equipo_id = ?', (miembro_id, equipo_id))
             conn.commit()
-
-            # Verificar que se eliminó correctamente
-            if DATABASE_URL:
-                cursor.execute('SELECT COUNT(*) FROM cuerpo_tecnico WHERE id = %s', (miembro_id,))
-            else:
-                cursor.execute('SELECT COUNT(*) FROM cuerpo_tecnico WHERE id = ?', (miembro_id,))
-            exists = cursor.fetchone()[0] > 0
             conn.close()
 
-            if exists:
-                print(f"⚠️ ADVERTENCIA: El miembro {miembro_id} aún existe en la BD después de eliminar")
-                return jsonify({'error': 'Error al eliminar de la base de datos'}, 500)
-
-            print(f"✅ Miembro {miembro.nombre} eliminado correctamente")
             return jsonify({'success': True, 'mensaje': 'Miembro eliminado'})
 
         return jsonify({'error': 'No se pudo eliminar el miembro'}), 500
