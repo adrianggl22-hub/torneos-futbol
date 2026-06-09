@@ -416,7 +416,7 @@ def guardar_torneo(torneo):
                   equipo.puntos, equipo.partidos_jugados, equipo.ganados, equipo.empatados, equipo.perdidos,
                   equipo.goles_favor, equipo.goles_contra))
             
-            # Guardar jugadores del equipo
+            # Guardar jugadores del equipo (SOLO INSERT/UPDATE, NO DELETE)
             for jugador in equipo.jugadores.values():
                 cursor.execute('''
                     INSERT INTO jugadores 
@@ -424,17 +424,30 @@ def guardar_torneo(torneo):
                      fecha_nacimiento, telefono, email, altura, peso, pierna_habil,
                      goles, asistencias, tarjetas_amarillas, tarjetas_rojas, partidos_jugados, minutos_jugados)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
+                    ON CONFLICT (id, equipo_id) DO UPDATE SET
                         nombre = EXCLUDED.nombre,
                         numero = EXCLUDED.numero,
                         posicion = EXCLUDED.posicion,
+                        nombre_abreviado = EXCLUDED.nombre_abreviado,
+                        documento = EXCLUDED.documento,
+                        fecha_nacimiento = EXCLUDED.fecha_nacimiento,
+                        telefono = EXCLUDED.telefono,
+                        email = EXCLUDED.email,
+                        altura = EXCLUDED.altura,
+                        peso = EXCLUDED.peso,
+                        pierna_habil = EXCLUDED.pierna_habil,
                         goles = EXCLUDED.goles,
+                        asistencias = EXCLUDED.asistencias,
                         tarjetas_amarillas = EXCLUDED.tarjetas_amarillas,
-                        tarjetas_rojas = EXCLUDED.tarjetas_rojas
+                        tarjetas_rojas = EXCLUDED.tarjetas_rojas,
+                        partidos_jugados = EXCLUDED.partidos_jugados,
+                        minutos_jugados = EXCLUDED.minutos_jugados
                 ''', (jugador.id, equipo.id, jugador.nombre, jugador.numero, jugador.posicion, jugador.nombre_abreviado,
                       jugador.documento, jugador.fecha_nacimiento, jugador.telefono, jugador.email, jugador.altura, jugador.peso,
                       jugador.pierna_habil, jugador.goles, jugador.asistencias, jugador.tarjetas_amarillas,
                       jugador.tarjetas_rojas, jugador.partidos_jugados, jugador.minutos_jugados))
+            
+            print(f"   💾 Jugadores guardados para equipo {equipo.nombre}: {len(equipo.jugadores)}")
             
             # Guardar cuerpo técnico
             for miembro in equipo.cuerpo_tecnico.values():
@@ -447,7 +460,10 @@ def guardar_torneo(torneo):
                         rol = EXCLUDED.rol,
                         documento = EXCLUDED.documento,
                         telefono = EXCLUDED.telefono,
-                        email = EXCLUDED.email
+                        email = EXCLUDED.email,
+                        fecha_nacimiento = EXCLUDED.fecha_nacimiento,
+                        especialidad = EXCLUDED.especialidad,
+                        experiencia = EXCLUDED.experiencia
                 ''', (miembro.id, equipo.id, miembro.nombre, miembro.rol, miembro.documento,
                       miembro.telefono, miembro.email, miembro.fecha_nacimiento,
                       miembro.especialidad, miembro.experiencia))
