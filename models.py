@@ -6,8 +6,8 @@ import json
 class Jugador:
     """Clase para representar un jugador"""
     def __init__(self, id: int, nombre: str, equipo_id: int, numero: int = 0, posicion: str = "",
-                 nombre_abreviado: str = "", documento: str = "", fecha_nacimiento: str = "",
-                 telefono: str = "", email: str = "", altura: int = None, peso: float = None,
+                 nombre_abreviado: str = "", documento: str = None, fecha_nacimiento: str = None,
+                 telefono: str = None, email: str = None, altura: float = None, peso: float = None,
                  pierna_habil: str = "", goles: int = 0, asistencias: int = 0,
                  tarjetas_amarillas: int = 0, tarjetas_rojas: int = 0,
                  partidos_jugados: int = 0, minutos_jugados: int = 0):
@@ -17,10 +17,11 @@ class Jugador:
         self.numero = numero
         self.posicion = posicion
         self.nombre_abreviado = nombre_abreviado
-        self.documento = documento
-        self.fecha_nacimiento = fecha_nacimiento
-        self.telefono = telefono
-        self.email = email
+        # Convertir cadenas vacías a None para PostgreSQL
+        self.documento = documento if documento else None
+        self.fecha_nacimiento = fecha_nacimiento if fecha_nacimiento else None
+        self.telefono = telefono if telefono else None
+        self.email = email if email else None
         self.altura = altura
         self.peso = peso
         self.pierna_habil = pierna_habil
@@ -59,16 +60,16 @@ class Jugador:
 class MiembroCuerpoTecnico:
     """Clase para representar un miembro del cuerpo técnico"""
     def __init__(self, id: int, nombre: str, equipo_id: int, rol: str = "",
-                 documento: str = "", telefono: str = "", email: str = "",
-                 fecha_nacimiento: str = "", especialidad: str = "", experiencia: str = ""):
+                 documento: str = None, telefono: str = None, email: str = None,
+                 fecha_nacimiento: str = None, especialidad: str = "", experiencia: str = ""):
         self.id = id
         self.nombre = nombre
         self.equipo_id = equipo_id
         self.rol = rol
-        self.documento = documento
-        self.telefono = telefono
-        self.email = email
-        self.fecha_nacimiento = fecha_nacimiento
+        self.documento = documento if documento else None
+        self.telefono = telefono if telefono else None
+        self.email = email if email else None
+        self.fecha_nacimiento = fecha_nacimiento if fecha_nacimiento else None
         self.especialidad = especialidad
         self.experiencia = experiencia
     
@@ -94,9 +95,9 @@ class Equipo:
                  anio_fundacion: int = None, estadio: str = ""):
         self.id = id_equipo
         self.nombre = nombre
-        self.entrenador = entrenador
+        self.entrenador = entrenador if entrenador else None
         self.anio_fundacion = anio_fundacion
-        self.estadio = estadio
+        self.estadio = estadio if estadio else None
         self.jugadores: Dict[int, Jugador] = {}
         self.cuerpo_tecnico: Dict[int, MiembroCuerpoTecnico] = {}
         
@@ -115,15 +116,21 @@ class Equipo:
         self.proximo_id_cuerpo_tecnico = 1
     
     def agregar_jugador(self, nombre: str, numero: int, posicion: str,
-                        nombre_abreviado: str = "", documento: str = "",
-                        fecha_nacimiento: str = "", telefono: str = "",
-                        email: str = "", altura: int = None, peso: float = None,
+                        nombre_abreviado: str = "", documento: str = None,
+                        fecha_nacimiento: str = None, telefono: str = None,
+                        email: str = None, altura: float = None, peso: float = None,
                         pierna_habil: str = "") -> bool:
         """Agrega un jugador al equipo"""
         # Verificar que el número no esté en uso
         for jugador in self.jugadores.values():
             if jugador.numero == numero:
                 return False
+        
+        # Convertir valores vacíos a None
+        documento = documento if documento else None
+        fecha_nacimiento = fecha_nacimiento if fecha_nacimiento else None
+        telefono = telefono if telefono else None
+        email = email if email else None
         
         jugador = Jugador(
             id=self.proximo_id_jugador,
@@ -152,10 +159,16 @@ class Equipo:
         return False
     
     def agregar_miembro_cuerpo_tecnico(self, nombre: str, rol: str,
-                                        documento: str = "", telefono: str = "",
-                                        email: str = "", fecha_nacimiento: str = "",
+                                        documento: str = None, telefono: str = None,
+                                        email: str = None, fecha_nacimiento: str = None,
                                         especialidad: str = "", experiencia: str = "") -> bool:
         """Agrega un miembro al cuerpo técnico"""
+        # Convertir valores vacíos a None
+        documento = documento if documento else None
+        telefono = telefono if telefono else None
+        email = email if email else None
+        fecha_nacimiento = fecha_nacimiento if fecha_nacimiento else None
+        
         miembro = MiembroCuerpoTecnico(
             id=self.proximo_id_cuerpo_tecnico,
             nombre=nombre,
@@ -219,7 +232,7 @@ class Equipo:
 
 class Partido:
     """Clase para representar un partido"""
-    def __init__(self, id_partido: int, id_local: int, id_visitante: int,
+    def __init__(self, id_partido, id_local: int, id_visitante: int,
                  nombre_local: str, nombre_visitante: str, fecha: str = "",
                  hora: str = "", cancha: str = ""):
         self.id = id_partido
@@ -227,9 +240,9 @@ class Partido:
         self.id_visitante = id_visitante
         self.nombre_local = nombre_local
         self.nombre_visitante = nombre_visitante
-        self.fecha = fecha
-        self.hora = hora
-        self.cancha = cancha
+        self.fecha = fecha if fecha else None
+        self.hora = hora if hora else None
+        self.cancha = cancha if cancha else None
         self.goles_local = 0
         self.goles_visitante = 0
         self.jugado = False
@@ -286,7 +299,7 @@ class Noticia:
         self.contenido = contenido
         self.fecha = fecha or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.tipo = tipo
-        self.url_media = url_media
+        self.url_media = url_media if url_media else None
         self.torneo_id = torneo_id
     
     def to_dict(self) -> dict:
@@ -309,8 +322,8 @@ class Torneo:
         self.id = id_torneo
         self.nombre = nombre
         self.categoria = categoria
-        self.fecha_inicio = fecha_inicio
-        self.fecha_fin = fecha_fin
+        self.fecha_inicio = fecha_inicio if fecha_inicio else None
+        self.fecha_fin = fecha_fin if fecha_fin else None
         self.equipos: Dict[int, Equipo] = {}
         self.partidos: Dict[int, Partido] = {}
         self.noticias: Dict[int, Noticia] = {}
@@ -333,9 +346,9 @@ class Torneo:
         equipo = Equipo(
             id_equipo=self.proximo_id_equipo,
             nombre=nombre,
-            entrenador=entrenador,
+            entrenador=entrenador if entrenador else None,
             anio_fundacion=anio_fundacion,
-            estadio=estadio
+            estadio=estadio if estadio else None
         )
         self.equipos[equipo.id] = equipo
         self.proximo_id_equipo += 1
@@ -461,7 +474,7 @@ class Torneo:
                     secuencia.append("✈️ VISITANTE")
             print(f"   🔄 Secuencia para {self.equipos[equipo_ejemplo].nombre}: {' -> '.join(secuencia)}")
     
-    def registrar_resultado_completo(self, partido_id: int, goles_local: int,
+    def registrar_resultado_completo(self, partido_id, goles_local: int,
                                       goles_visitante: int, goleadores: dict) -> bool:
         """Registra el resultado completo de un partido con goleadores"""
         if partido_id not in self.partidos:
@@ -581,7 +594,7 @@ class Torneo:
         goleadores.sort(key=lambda x: -x['goles'])
         return goleadores[:limite]
     
-    def get_resumen_partido(self, partido_id: int) -> dict:
+    def get_resumen_partido(self, partido_id) -> dict:
         """Obtiene el resumen detallado de un partido"""
         if partido_id not in self.partidos:
             return None
@@ -620,7 +633,7 @@ class Torneo:
             titulo=titulo,
             contenido=contenido,
             tipo=tipo,
-            url_media=url_media,
+            url_media=url_media if url_media else None,
             torneo_id=self.id
         )
         self.noticias[noticia.id] = noticia
