@@ -47,7 +47,7 @@
     <div id="torneosList" class="torneos-grid">
         {% if torneos %}
             {% for id, torneo in torneos.items() %}
-            <div class="torneo-card" data-id="{{ id }}">
+            <div class="torneo-card" id="torneo-{{ id }}" data-id="{{ id }}">
                 <h3>{{ torneo.nombre }}</h3>
                 <div class="torneo-stats">
                     <span>📊 {{ torneo.equipos|length }} equipos</span>
@@ -57,11 +57,12 @@
                 <div class="torneo-actions">
                     <a href="/torneo/{{ id }}" class="btn btn-secondary">Administrar</a>
                     <button class="btn-small btn-view" onclick="verProximosPartidos('{{ id }}')">📅 Ver Próximos</button>
+                    <button class="btn-small btn-danger" onclick="eliminarTorneo('{{ id }}', '{{ torneo.nombre }}')">🗑️ Eliminar</button>
                 </div>
             </div>
             {% endfor %}
         {% else %}
-            <p class="no-torneos">No hay torneos creados aún. ¡Crea el primero!</p>
+            <p class="no-torneos" id="noTorneosMsg">No hay torneos creados aún. ¡Crea el primero!</p>
         {% endif %}
     </div>
 </div>
@@ -193,7 +194,7 @@
 
 .torneos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1.5rem;
 }
 
@@ -228,6 +229,7 @@
     display: flex;
     gap: 0.5rem;
     margin-top: 1rem;
+    flex-wrap: wrap;
 }
 
 .btn-small {
@@ -239,6 +241,7 @@
     text-decoration: none;
     border: none;
     cursor: pointer;
+    transition: all 0.2s;
 }
 
 .btn-view {
@@ -248,6 +251,15 @@
 
 .btn-view:hover {
     background: var(--primary-dark);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
 }
 
 .info-mensaje {
@@ -464,6 +476,9 @@ textarea.form-control {
     .info-titulo {
         font-size: 1.3rem;
     }
+    .torneos-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
@@ -527,6 +542,58 @@ document.getElementById('crearTorneoForm').addEventListener('submit', async (e) 
         alert('Error al crear el torneo');
     }
 });
+
+// ==================== ELIMINAR TORNEO ====================
+async function eliminarTorneo(torneoId, torneoNombre) {
+    if (confirm(`⚠️ ¿Estás seguro de que deseas eliminar el torneo "${torneoNombre}"?\n\nEsta acción eliminará TODOS los datos del torneo (equipos, jugadores, partidos, resultados) y NO se puede deshacer.`)) {
+        
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Eliminando...';
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/eliminar`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Eliminar la tarjeta del torneo del DOM
+                const torneoCard = document.getElementById(`torneo-${torneoId}`);
+                if (torneoCard) {
+                    torneoCard.remove();
+                }
+                alert(`✅ ${data.mensaje}`);
+                
+                // Si no quedan torneos, mostrar mensaje
+                const torneosRestantes = document.querySelectorAll('.torneo-card');
+                if (torneosRestantes.length === 0) {
+                    const torneosGrid = document.getElementById('torneosList');
+                    torneosGrid.innerHTML = '<p class="no-torneos">No hay torneos creados aún. ¡Crea el primero!</p>';
+                }
+                
+                // Recargar los próximos partidos si el torneo eliminado estaba seleccionado
+                const proximosDiv = document.getElementById('proximosPartidos');
+                if (proximosDiv) {
+                    proximosDiv.innerHTML = '<p class="info-mensaje">Selecciona un torneo para ver los próximos partidos</p>';
+                }
+            } else {
+                alert('❌ Error: ' + (data.error || 'No se pudo eliminar el torneo'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ Error de conexión');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+}
 
 // ==================== GESTIÓN DE INFORMACIÓN DEL CAMPEONATO ====================
 
