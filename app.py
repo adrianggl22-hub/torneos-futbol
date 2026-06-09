@@ -556,7 +556,7 @@ def imprimir_calendario(torneo_id):
         for partido in jornada_partidos:
             fecha_mostrar = partido.fecha if partido.fecha else 'Por definir'
             hora_mostrar = partido.hora if partido.hora else 'Por definir'
-            cancha_mostrar = partido.cancha if partido.cancha else 'Por defining'
+            cancha_mostrar = partido.cancha if partido.cancha else 'Por definir'
             
             resultado = ""
             if partido.jugado:
@@ -697,7 +697,10 @@ def eliminar_torneo(torneo_id):
     cursor = conn.cursor()
     
     # Eliminar de la base de datos PostgreSQL
-    cursor.execute("DELETE FROM torneos WHERE id = %s", (torneo_id,))
+    if DATABASE_URL:
+        cursor.execute("DELETE FROM torneos WHERE id = %s", (torneo_id,))
+    else:
+        cursor.execute("DELETE FROM torneos WHERE id = ?", (torneo_id,))
     conn.commit()
     conn.close()
     
@@ -747,12 +750,33 @@ def gestion_equipos(torneo_id):
 
     elif request.method == 'POST':
         data = request.json
-        nombre = data.get('nombre')
-
+        nombre = data.get('nombre', '').strip()
+        
         if not nombre:
             return jsonify({'error': 'Nombre requerido'}), 400
+        
+        # ========== VALIDACIÓN PARA EVITAR ERROR DE INTEGER VACÍO ==========
+        # Convertir valores vacíos a None para que PostgreSQL los trate como NULL
+        anio_fundacion = data.get('anio_fundacion', '')
+        if anio_fundacion == '' or anio_fundacion is None:
+            anio_fundacion = None
+        else:
+            try:
+                # Intentar convertir a entero
+                anio_fundacion = int(anio_fundacion)
+            except (ValueError, TypeError):
+                anio_fundacion = None
+        
+        estadio = data.get('estadio', '')
+        if estadio == '':
+            estadio = None
+        
+        entrenador = data.get('entrenador', '')
+        if entrenador == '':
+            entrenador = None
+        # ========== FIN VALIDACIÓN ==========
 
-        if torneo.agregar_equipo(nombre, data.get('entrenador', ''), data.get('anio_fundacion'), data.get('estadio', '')):
+        if torneo.agregar_equipo(nombre, entrenador, anio_fundacion, estadio):
             save_torneo(torneo_id)
             return jsonify({'success': True, 'mensaje': f'Equipo {nombre} agregado'})
         else:
@@ -1414,7 +1438,10 @@ def admin_usuarios():
     from database import get_db
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, rol, nombre, email, creado_en FROM usuarios ORDER BY id")
+    if DATABASE_URL:
+        cursor.execute("SELECT id, username, rol, nombre, email, creado_en FROM usuarios ORDER BY id")
+    else:
+        cursor.execute("SELECT id, username, rol, nombre, email, creado_en FROM usuarios ORDER BY id")
     usuarios = cursor.fetchall()
     conn.close()
     return render_template('admin_usuarios.html', usuarios=usuarios)
@@ -1433,13 +1460,20 @@ def admin_agregar_usuario():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute('''
-            INSERT INTO usuarios (username, password, rol, nombre, email)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (username, password, rol, nombre, email))
+        if DATABASE_URL:
+            cursor.execute('''
+                INSERT INTO usuarios (username, password, rol, nombre, email)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (username, password, rol, nombre, email))
+        else:
+            cursor.execute('''
+                INSERT INTO usuarios (username, password, rol, nombre, email)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (username, password, rol, nombre, email))
         conn.commit()
         flash('✅ Usuario agregado correctamente', 'success')
-    except:
+    except Exception as e:
+        print(f"Error al agregar usuario: {e}")
         flash('❌ Error: El nombre de usuario ya existe', 'danger')
     conn.close()
     return redirect(url_for('admin_usuarios'))
@@ -1455,7 +1489,10 @@ def admin_eliminar_usuario(usuario_id):
     from database import get_db
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM usuarios WHERE id = ?", (usuario_id,))
+    if DATABASE_URL:
+        cursor.execute("DELETE FROM usuarios WHERE id = %s", (usuario_id,))
+    else:
+        cursor.execute("DELETE FROM usuarios WHERE id = ?", (usuario_id,))
     conn.commit()
     conn.close()
     flash('✅ Usuario eliminado', 'success')
