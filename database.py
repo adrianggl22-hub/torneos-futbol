@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Dict, Optional
 
 # ==================== CONFIGURACIÓN ====================
-# OBTENER URL DE POSTGRESQL DESDE VARIABLES DE ENTORNO
+# OBTENER URL DE POSTGRESQL DESDE VARIABABLES DE ENTORNO
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
@@ -322,7 +322,9 @@ def crear_usuarios_default_postgresql():
     cursor = conn.cursor()
     
     cursor.execute("SELECT COUNT(*) FROM usuarios")
-    count = cursor.fetchone()[0]
+    result = cursor.fetchone()
+    # Con RealDictCursor, el resultado es un diccionario como {'count': 0}
+    count = result['count'] if isinstance(result, dict) else result[0]
     
     if count == 0:
         print("📝 Creando usuarios por defecto para PostgreSQL...")
