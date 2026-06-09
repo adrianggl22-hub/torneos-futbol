@@ -448,7 +448,7 @@
         <div id="equiposList" class="equipos-grid">
             {% if torneo.equipos %}
                 {% for id, equipo in torneo.equipos.items() %}
-                <div class="equipo-card">
+                <div class="equipo-card" id="equipo-card-{{ id }}">
                     <div class="flex-between">
                         <div>
                             <h3>{{ equipo.nombre }}</h3>
@@ -464,7 +464,7 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <p class="info-mensaje">No hay equipos registrados aún</p>
+                <p class="info-mensaje" id="noEquiposMsg">No hay equipos registrados aún</p>
             {% endif %}
         </div>
     </div>
@@ -819,22 +819,53 @@
         window.open(`/imprimir_plantilla/${torneoId}/${equipoId}`, '_blank');
     }
 
-    // ==================== EQUIPOS ====================
+    // ==================== EQUIPOS (CORREGIDO - CIERRA MODAL AUTOMÁTICAMENTE) ====================
     document.getElementById('formAgregarEquipo')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const response = await fetch(`/api/torneo/${torneoId}/equipos`, {
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                nombre: document.getElementById('nombreEquipo').value, 
-                entrenador: document.getElementById('entrenadorEquipo').value, 
-                anio_fundacion: document.getElementById('anioFundacion').value, 
-                estadio: document.getElementById('estadioEquipo').value
-            })
-        });
-        const data = await response.json();
-        if (data.success) location.reload();
-        else alert(data.error);
+        
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '⏳ Guardando...';
+        submitBtn.disabled = true;
+        
+        const nombreEquipo = document.getElementById('nombreEquipo').value.trim();
+        
+        if (!nombreEquipo) {
+            alert('❌ Por favor ingresa el nombre del equipo');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/torneo/${torneoId}/equipos`, {
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    nombre: nombreEquipo, 
+                    entrenador: document.getElementById('entrenadorEquipo').value, 
+                    anio_fundacion: document.getElementById('anioFundacion').value, 
+                    estadio: document.getElementById('estadioEquipo').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('✅ Equipo agregado correctamente');
+                cerrarModal('modalEquipo');
+                document.getElementById('formAgregarEquipo').reset();
+                location.reload();
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ Error de conexión');
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
     });
 
     function eliminarEquipo(equipoId) { 
@@ -882,7 +913,7 @@
                 </td>
             </tr>`;
         });
-        html += `</tbody></table></div>`;
+        html += `</tbody></tr></div>`;
         document.getElementById('jugadoresList').innerHTML = html;
     }
     
@@ -1071,7 +1102,7 @@
             document.getElementById('tecnicoList').innerHTML = '<p class="info-mensaje">No hay miembros registrados</p>'; 
             return; 
         }
-        let html = `<div class="table-container"><tr><thead><tr><th>Rol</th><th>Nombre</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        let html = `<div class="table-container"><td><thead><tr><th>Rol</th><th>Nombre</th><th>Documento</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
         tecnicos.forEach(t => { 
             html += `<tr>
                 <td><strong>${escapeHtml(t.rol)}</strong></td>
@@ -1148,7 +1179,7 @@
             document.getElementById('fixtureList').innerHTML = '<p class="info-mensaje">No hay partidos programados</p>'; 
             return; 
         }
-        let html = `<div class="table-container"><table><thead><tr><th>Local</th><th>Visitante</th><th style="text-align:center">Fecha</th><th style="text-align:center">Hora</th><th>Cancha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
+        let html = `<div class="table-container"></td><thead><tr><th>Local</th><th>Visitante</th><th style="text-align:center">Fecha</th><th style="text-align:center">Hora</th><th>Cancha</th><th style="text-align:center">Acciones</th></tr></thead><tbody>`;
         pendientes.forEach(p => {
             html += `<tr>
                 <td><strong>${escapeHtml(p.nombre_local)}</strong></td>
@@ -1259,7 +1290,7 @@
         document.getElementById('resultadosList').innerHTML = html;
     }
 
-    // ==================== TABLA DE POSICIONES (VERSIÓN CORREGIDA) ====================
+    // ==================== TABLA DE POSICIONES ====================
     async function cargarTablaPosiciones() {
         const response = await fetch(`/api/torneo/${torneoId}/tabla`);
         const tabla = await response.json();
@@ -1335,7 +1366,7 @@
             document.getElementById('rankingGoleadores').innerHTML = '<p class="info-mensaje">No hay goles registrados</p>'; 
             return; 
         }
-        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"><table><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
+        let html = `<div style="margin-bottom:20px;text-align:center"><h3>⚽ RANKING DE GOLEADORAS ⚽</h3></div><div class="table-container"><tr><thead><tr style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;"><th style="text-align:center; width:70px;">🏆 Pos</th><th>Jugadora</th><th style="text-align:center;">⚽ Goles</th><th>Equipo</th><th style="text-align:center;">#</th></tr></thead><tbody>`;
         goleadores.forEach((g, idx) => {
             let medalla = idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':'';
             html += `<tr>
@@ -1346,7 +1377,7 @@
                 <td style="text-align:center;">#${g.numero||'-'}</td>
             </tr>`;
         });
-        html += `</tbody></table></div>`;
+        html += `</tbody></tr></div>`;
         document.getElementById('rankingGoleadores').innerHTML = html;
     }
 
